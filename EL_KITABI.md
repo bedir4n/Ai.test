@@ -9,75 +9,75 @@ Bu belge oyundaki eğitim defterinin kopyasıdır. Oyunda masadaki kırmızı de
 
 ## Bölüm 1 · Görev
 
-**Madde 1.1.** Denetçi de bir mahkûmdur. İnfazı, bu masada idareye yaradığı sürece ertelenir.
+**Madde 1.1.** Denetçi de bir mahkûmdur. İdare adına paket denetler; bazı paketler ise direniş adına ona gelir.
 
-**Madde 1.2.** Vardiya jeneratörün yakıtı kadar sürer (5 dk). Işık azaldıkça lamba titrer. Duvardaki gösterge kalan yakıtı gösterir.
+**Madde 1.2 · Şüphe.** Lambanın gövdesindeki paslı ibre idarenin sana olan şüphesidir. GÜVENLİ'den DEŞİFRE'ye gider. Sona vurursa deşifre olursun: infaz.
 
-**Madde 1.3.** Günde 7 paket gelir. En az 6 doğru karar zorunludur. 3 ihlal ya da −30 kr altı bakiye vardiyayı derhal keser.
+**Madde 1.3 · İsyan.** Direniş paketlerini içeri sızdırdıkça isyan yaklaşır (her biri %25). %100 olunca kapılar içeriden kırılır. Sayaç çekmecenin dibindedir.
 
-**Madde 1.4.** Akış: paket bantta durur → tıkla, masaya al → tıkla, aç → incele → damgala → kolu çek.
+**Madde 1.4 · Döngü.** 1) Paket gelir, şifre ara · 2) Mühürü doğrula, gerekirse sahte onay bas · 3) Tara, gerekiyorsa kes ve çek · 4) Kolu çek.
 
-**Madde 1.5.** Kâğıtları okumak için sağ tuşu basılı tut; denetçi masaya eğilir.
+**Madde 1.5.** Kâğıtları okumak için sağ tuşu basılı tut; masaya eğilirsin. Vardiya jeneratör yakıtı kadar sürer (5 dk).
 
-## Bölüm 2 · Fiziksel doğrulama
+## Aşama 1 · İlk bakış ve şifre
 
-**Madde 2.1 · Terazi.** El (1) ile eşyaya tıkla: teraziye konur. Kırmızı LED gerçek ağırlığı gösterir. Manifestodaki gramla karşılaştır. Fazlalık zula demektir.
+**Paketi al, aç.** Bantta duran pakete tıkla: masaya gelir. Bir daha tıkla: açılır, eşyalar dizilir.
 
-**Madde 2.2 · Mühür.** Resmî mum mühür paketin önündedir. Spatula (7) ile mühre tıkla: numune test kabına düşer.
+**Manifestonun arkası.** El (1) ile manifestoya tıkla: kâğıt çevrilir. Arkasında el yazısı not olabilir.
 
-**Madde 2.3 · Ayıraç.** Ayıraç (8) ile kaba tıkla. **MAVİ:** mühür gerçek. **KIRMIZI:** mühür sahte, paket kurcalanmış. Şişede 10 damla vardır; boş kaba damlatmak israftır.
+**Kutunun tabanı.** Paket boşalınca el ile kutuya tıkla: kutuyu kaldırıp tabanına bakarsın. Notlar bazen oraya yapıştırılır.
 
-**Madde 2.4 · Damga.** Damga (6) elindeyken **Q:** DENETLENDİ, **W:** SAHTE. Manifestoya tıkla. Mühür gerçekse DENETLENDİ, sahteyse SAHTE vurulur ve pakete el konur. Damgasız, yanlış damgalı ya da SAHTE damgalı paketi geçirmek evrak hatasıdır: −3 kr. İlk damga kesindir.
+**Not ne demek?** Direniş notu olan paket direniş paketidir. Notu okumadan karar verirsen neyi geçirdiğini bilmezsin. Her not dost değildir: muhbirler de yazar.
 
-## Bölüm 3 · Tespit
+**Terazi.** El ile eşyaya tıkla: teraziye konur. Manifestodaki gramdan ağırsa içinde bir şey vardır.
 
-**Madde 3.1 · Vizör (5).** Sol tuş basılıyken tarar. **Q** Metal (yeşil), **W** Organik (turuncu), **E** Mürekkep (mor). Mercek yalnız seçili türün izini gösterir.
+## Aşama 2 · Mühür ve sahtecilik
 
-**Madde 3.2 · Derinlik.** Fare tekerleği derinlik kadranıdır (0–255). Her eşyanın derinliği farklıdır. Yanlış derinlikte iz bulanık ve parazitlidir; doğru değerde netleşir, sinyal çubuğu dolar.
+**Mühür testi.** Spatula (5) ile paketin önündeki mum mühre tıkla: numune kaba düşer. Asit (7) ile kaba tıkla: **MAVİ** gerçek, **KIRMIZI** sahte (paket kurcalanmış).
 
-**Madde 3.3 · Isı.** Aralıksız tarama 5 sn'de vizörü ısıtır; sigorta atar, 6 sn çalışmaz. Soğuması 9 sn sürer.
+**Sahte onay damgası (6).** Masanın sağ altındaki çekmecede durur. 6'ya basınca çekmece gıcırdayarak açılır, damga eline gelir. Manifestonun ön yüzüne bas: idarenin DENETLENDİ damgasının aynısı (yalnız alt satırdaki yıldızlar farklı).
 
-**Madde 3.4 · Gerçek mühür.** Gerçek mühürlerde idarenin görünmez amblemi vardır. Mürekkep modunda halka olarak parlar; sahtelerde yoktur.
+**Ne zaman?** Bir direniş paketini içeri sızdıracaksan, kolu çekmeden önce. Damgasız sızdırma idareyi çok kıllandırır.
 
-**Madde 3.5 · İğne (2).** Yumuşak eşyaya batır. Sert bir şeye değerse tıkırdar ve kırmızı başlı iğne kalır; değmezse beyaz. Eşya başına en çok 6 iğne. Konserveye girmez.
+**Çekmece.** Ön yüzüne tıkla ya da aşağı sürükle: açılır. İş bitince kapat.
 
-## Bölüm 4 · Çıkarma ve karar
+## Aşama 3 · Vizör ve cımbız
 
-**Madde 4.1 · Neşter (3).** Pastada neşter lekenin tam üstüne saplanmalıdır. Iska boş kesik bırakır: −3 kr. Temiz eşyayı kesmek de mal hasarıdır.
+**Tarayıcı (F basılı).** İmlecin etrafında x-ray merceği açılır; eşyaların içindeki şüpheli lekeyi, gizli mürekkebi ve gerçek mühürlerdeki görünmez amblemi gösterir. Isınır: halka kızarır, 5 sn'de sigorta atar, 6 sn çalışmaz.
 
-**Madde 4.2 · Cımbız (4).** Bulunan kaçağı çeker ve delil tepsisine koyar. Tepsideki delil kayda geçer; terazi ağırlığı düşer.
+**İğne (2).** Yumuşak eşyayı yoklar, zarar vermez. Sert bir şeye değerse kırmızı başlı iğne kalır. Mercekte nabız gibi atan kapsülü iğneyle del: tuzak söner.
 
-**Madde 4.3 · Yeşil kol.** Paket kapanır, banda döner, sola gider.
+**El koyacaksan.** Neşter (3) ile lekenin tam üstünden kes, cımbız (4) ile kaçağı çek: delil tepsisine gider. Temiz eşyayı kesmek mal hasarıdır (−3 kr).
 
-**Madde 4.4 · Kırmızı kol.** Paket hidrolik prese gider, ezilir, bacaya düşer. Temiz pakete el koymak ihlaldir.
+**Sızdıracaksan.** Kesme. Kaçak içinde kalsın. Ya da çekmece açıkken cımbızla çek: çekmeceye saklanır, gece direnişe teslim edilir.
 
-**Madde 4.5 · Makbuz.** Her karar ve ceza soldaki yazıcıdan makbuz olarak çıkar: tutar, bakiye, doğru ve ihlal sayısı.
+**Tuzak.** Sönmemiş kapsülü kesersen gözlüğe mürekkep sıçrar: **R** basılı tut, sil. Delil bozulur, prim yarıya iner.
 
-## Bölüm 5 · Tuzaklar
+## Aşama 4 · Stratejik karar
 
-**Madde 5.1.** Bazı paketlere mürekkep kapsülü yerleştirilir. Vizörün Mürekkep modunda nabız gibi atan bir leke olarak görünür.
+| Kol | Durum | Kredi | Şüphe | İsyan |
+|---|---|---|---|---|
+| Yeşil | Direniş kaçağı içeride, sahte onay var | 0 | +3 | +25 |
+| Yeşil | Direniş kaçağı içeride, sahte onay yok | 0 | +25 | +25 |
+| Yeşil | Çete kaçağı (direnişin değil) içeride | −15 | +15 | — |
+| Yeşil | Temiz paket (ya da kaçak tepsiye/çekmeceye alınmış) | +10 | — | — |
+| Kırmızı | Kaçak var (içeride ya da tepside) | +10 | −10 | — |
+| Kırmızı | Temiz görünen paket | −10 | +10 | — |
+| — | Çekmecede saklanıp vardiya sonunda teslim edilen her direniş kaçağı | — | — | +15 |
 
-**Madde 5.2.** Kapsül önce iğneyle delinerek boşaltılır. Delinmeden kesilen eşyada kapsül patlar: gözlüğe mürekkep sıçrar, delil hasar görür.
+## Müfettiş baskını
 
-**Madde 5.3.** Mürekkebi silmek için **R** tuşunu basılı tut. Silinmezse 8 sn görüş kapanır.
+Tünelin üstündeki kırmızı **MÜFETTİŞ** lambası yanar: 5 saniye. Çekmeceyi kapat, masadaki açıkta kaçağı cımbızla tepsiye ya da çekmeceye al (çekmece açıkken el de olur), sahte damgayı elinde tutma.
 
-## Ek-A · Ödül ve cezalar (kr)
+- Yakalanırsan: şüphe **+50**
+- Temiz çıkarsan: şüphe **−5**
 
-| Olay | Tutar |
-|---|---|
-| Doğru karar | +10 |
-| Delili hasarlı el koyma | +5 |
-| Muhbir notlu pakete el koyma | +5 ek |
-| Mal hasarı (boş kesik, temiz eşyayı kesmek) | −3 |
-| Evrak hatası (damgasız, yanlış damga, SAHTE damgalı paketi geçirmek) | −3 |
-| Haksız el koyma | −10, ihlal |
-| Kaçak geçirme | −15, ihlal |
-| Çekmece aramasında yakalanma | −15, ihlal |
+## Ek · Kısayollar ve imleç
 
-## Ek-B · Kısayollar
+1 El · 2 İğne · 3 Neşter · 4 Cımbız · 5 Spatula · 6 Sahte onay damgası · 7 Asit
+F basılı: tara · Sağ tık basılı: eğil · B: el kitabı · R: gözlük sil · Esc: aleti bırak
 
-1 El · 2 İğne · 3 Neşter · 4 Cımbız · 5 Vizör · 6 Damga · 7 Spatula · 8 Ayıraç
-Sağ tık: eğil · B: el kitabı · R: gözlük sil · Esc: alet bırak
+İmleç: **nokta** boşta · **halka** tıklanabilir · **göz** okunabilir kâğıt ya da not · **alet simgesi** elindeki alet · **artı işaretli daire** tarayıcı.
 
 ---
 
@@ -85,12 +85,10 @@ Sağ tık: eğil · B: el kitabı · R: gözlük sil · Esc: alet bırak
 
 *(Önceki denetçinin el yazısı)*
 
-> Bu masada benden önce oturan adamı cuma asacaklar. Sen dikkatli ol.
+> Bu masada benden önce oturan adamı cuma asacaklar. İbreyi kırmızıya yaklaştırdı.
 >
-> Masanın altında çekmece var. Tutup kendine çek. İçinde Kızıl Hücreler'in taklit mührü duruyor.
+> Her paketi sızdırma. Arada bir kaçağa el koy; müfettiş seni sadık sansın, ibre geri iner.
 >
-> Kaçaklı paketi taklit mühürle damgalayıp yeşil kolu çekersen idare görmez. Resmî damgayla geçirirsen yakalanırsın.
+> Kırmızı lamba yanınca önce çekmece. Sonra masadaki ne varsa.
 >
-> Kara Taç başka yol ister: kaçağı cımbızla çek, çekmece açıkken tıkla, çekmeceye sakla. Paketi taklit mühürle damgala, temiz diye gönder. Vardiya sonunda arama olabilir.
->
-> Dört teslimat yeter (her biri %25). Çekmecenin dibindeki çentikleri say. Sonra çamaşırhane.
+> Dört paket yeter. Sonra çamaşırhane. — K.H.
