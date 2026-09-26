@@ -9,7 +9,7 @@
     --ink: #d8cfb8;
     --dim: #8a806a;
     --red: #b3372c;
-    --bg: #050505;
+    --bg: #0b0b0a;
   }
   * { box-sizing: border-box; }
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: "Courier New", monospace; color: var(--ink); }
@@ -24,7 +24,7 @@
   #light-bar { width: 160px; height: 6px; background: #1c1a15; margin-top: 4px; }
   #light-fill { height: 100%; width: 100%; background: #d9b35a; transition: width .2s linear; }
   #hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--dim); text-align: center; }
-  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,.85) 100%); }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%); }
 </style>
 </head>
 <body>
@@ -35,12 +35,12 @@
     <div><span class="label">GÜNÜN KURALI:</span> <span id="rule">İsyan riski — METAL YASAK</span></div>
   </div>
   <div class="panel" id="top-right">
-    <div><span class="label">KOTA</span> <b id="quota">0 / 5</b></div>
+    <div><span class="label">İŞLENEN</span> <b id="quota">0 / 5</b></div>
     <div><span class="label">RÖNTGEN</span> <b id="xray">3</b></div>
     <div><span class="label">JENERATÖR</span></div>
     <div id="light-bar"><div id="light-fill"></div></div>
   </div>
-  <div id="hint">Fare ile etrafa bak · Paketin üzerine gel</div>
+  <div id="hint"></div>
 </div>
 
 <script type="importmap">
@@ -59,135 +59,265 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.body.prepend(renderer.domElement);
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x040404);
-scene.fog = new THREE.Fog(0x040404, 3, 9);
+scene.background = new THREE.Color(0x0b0b0a);
+scene.fog = new THREE.Fog(0x0b0b0a, 5, 14);
 
-// Oyuncu masada oturuyor, masaya yukarıdan bakıyor
-const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.05, 50);
-const CAM_BASE = new THREE.Vector3(0, 1.55, 1.1);
+// Oyuncu masada oturuyor, bandı ve masayı yukarıdan görüyor
+const camera = new THREE.PerspectiveCamera(62, innerWidth / innerHeight, 0.05, 50);
+const CAM_BASE = new THREE.Vector3(0, 1.8, 1.25);
 camera.position.copy(CAM_BASE);
-const lookTarget = new THREE.Vector3(0, 0.8, -0.2);
+const lookTarget = new THREE.Vector3(0, 0.78, -0.45);
 
 // ---------- Işıklar ----------
-scene.add(new THREE.AmbientLight(0x1a1f2a, 0.35));
-// Oyuncunun arkasından gelen çok zayıf soğuk dolgu ışığı
-const fill = new THREE.PointLight(0x6f7f99, 0.6, 4, 1.5);
-fill.position.set(0, 1.8, 1.2);
-scene.add(fill);
+const ambient = new THREE.HemisphereLight(0xb8c2c8, 0x3a3226, 0.9);
+scene.add(ambient);
 
-const lamp = new THREE.SpotLight(0xffd79a, 9, 5, Math.PI / 4.2, 0.5, 1.6);
-lamp.position.set(-0.55, 1.3, -0.35);
-lamp.target.position.set(0, 0.78, -0.1);
+// Tavandaki floresan (soğuk genel ışık)
+const ceiling = new THREE.PointLight(0xdfe8e4, 14, 8, 1.4);
+ceiling.position.set(0, 2.6, -0.4);
+ceiling.castShadow = true;
+ceiling.shadow.mapSize.set(1024, 1024);
+ceiling.shadow.bias = -0.001;
+scene.add(ceiling);
+const tube = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.04, 0.08), new THREE.MeshBasicMaterial({ color: 0xe8f2ee }));
+tube.position.set(0, 2.7, -0.4);
+scene.add(tube);
+
+// Masa lambası (sıcak odak ışığı)
+const lamp = new THREE.SpotLight(0xffd79a, 6, 5, Math.PI / 3.6, 0.6, 1.6);
+lamp.position.set(-0.85, 1.25, -0.28);
+lamp.target.position.set(-0.1, 0.8, -0.2);
 lamp.castShadow = true;
 lamp.shadow.mapSize.set(1024, 1024);
 lamp.shadow.bias = -0.0005;
 scene.add(lamp, lamp.target);
 
 // ---------- Oda ----------
-const concrete = new THREE.MeshStandardMaterial({ color: 0x2b2b28, roughness: 0.95 });
-const floor = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), concrete);
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 12), new THREE.MeshStandardMaterial({ color: 0x4a4944, roughness: 0.95 }));
 floor.rotation.x = -Math.PI / 2;
 floor.receiveShadow = true;
 scene.add(floor);
 
-const backWall = new THREE.Mesh(new THREE.PlaneGeometry(10, 5), new THREE.MeshStandardMaterial({ color: 0x23261f, roughness: 1 }));
-backWall.position.set(0, 2.5, -1.6);
+const wallMat = new THREE.MeshStandardMaterial({ color: 0x4d5448, roughness: 1 });
+const backWall = new THREE.Mesh(new THREE.PlaneGeometry(12, 5), wallMat);
+backWall.position.set(0, 2.5, -1.4);
 backWall.receiveShadow = true;
 scene.add(backWall);
+// Duvarın alt yarısı koyu boyalı (kurum duvarı)
+const wainscot = new THREE.Mesh(new THREE.PlaneGeometry(12, 1.2), new THREE.MeshStandardMaterial({ color: 0x2f3a33, roughness: 0.9 }));
+wainscot.position.set(0, 0.6, -1.39);
+scene.add(wainscot);
 
-// Duvarda paketlerin geldiği kapak (servis penceresi)
-const hatch = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.05), new THREE.MeshStandardMaterial({ color: 0x15130f, metalness: 0.6, roughness: 0.5 }));
-hatch.position.set(0.9, 1.15, -1.57);
-scene.add(hatch);
+// ---------- Konveyör bant ----------
+const BELT_Z = -0.62;
+const BELT_Y = 0.9;           // bant üst yüzeyi
+const BELT_LEN = 5.2;
+const BELT_W = 0.55;
+const BELT_SPEED = 0.55;      // m/sn
+const SPAWN_X = 2.4;          // sağdaki açıklıktan girer
+const EXIT_X = -2.4;          // soldaki açıklıktan çıkar
+const INSPECT_X = 0;          // tam önümüzde durur
 
-// ---------- Masa ----------
-const wood = new THREE.MeshStandardMaterial({ color: 0x4a3423, roughness: 0.8 });
-const desk = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 1.2), wood);
-desk.position.set(0, 0.75, -0.3);
+const frameMat = new THREE.MeshStandardMaterial({ color: 0x3b4238, metalness: 0.6, roughness: 0.5 });
+const frameL = new THREE.Mesh(new THREE.BoxGeometry(BELT_LEN, 0.08, 0.04), frameMat);
+frameL.position.set(0, BELT_Y - 0.02, BELT_Z + BELT_W / 2 + 0.02);
+const frameR = frameL.clone();
+frameR.position.z = BELT_Z - BELT_W / 2 - 0.02;
+const beltBody = new THREE.Mesh(new THREE.BoxGeometry(BELT_LEN, 0.1, BELT_W), frameMat);
+beltBody.position.set(0, BELT_Y - 0.06, BELT_Z);
+beltBody.receiveShadow = true;
+scene.add(frameL, frameR, beltBody);
+for (let x = -2.2; x <= 2.2; x += 1.1) {
+  for (const dz of [BELT_W / 2 - 0.03, -BELT_W / 2 + 0.03]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, BELT_Y - 0.1, 0.05), frameMat);
+    leg.position.set(x, (BELT_Y - 0.1) / 2, BELT_Z + dz);
+    scene.add(leg);
+  }
+}
+
+// Kayan lastik yüzey (dokusu kaydırılarak hareket hissi verilir)
+function makeBeltTexture() {
+  const c = document.createElement('canvas');
+  c.width = 256; c.height = 64;
+  const x = c.getContext('2d');
+  x.fillStyle = '#1d1d1b'; x.fillRect(0, 0, 256, 64);
+  x.fillStyle = '#2c2c29';
+  for (let i = 0; i < 256; i += 32) x.fillRect(i, 0, 6, 64);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(BELT_LEN / 0.4, 1);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const beltTex = makeBeltTexture();
+const beltTop = new THREE.Mesh(new THREE.PlaneGeometry(BELT_LEN, BELT_W - 0.02), new THREE.MeshStandardMaterial({ map: beltTex, roughness: 0.85 }));
+beltTop.rotation.x = -Math.PI / 2;
+beltTop.position.set(0, BELT_Y - 0.009, BELT_Z);
+beltTop.receiveShadow = true;
+scene.add(beltTop);
+
+// Bandın iki ucundaki duvar açıklıkları (lastik perdeli)
+function makeOpening(x) {
+  const g = new THREE.Group();
+  const w = 0.75, h = 0.6;
+  const dark = new THREE.Mesh(new THREE.BoxGeometry(0.3, h, w), new THREE.MeshBasicMaterial({ color: 0x050505 }));
+  dark.position.y = BELT_Y + h / 2 - 0.05;
+  const topBar = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.08, w + 0.1), frameMat);
+  topBar.position.y = BELT_Y + h;
+  g.add(dark, topBar);
+  const flapMat = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.6, transparent: true, opacity: 0.85 });
+  for (let i = 0; i < 6; i++) {
+    const f = new THREE.Mesh(new THREE.BoxGeometry(0.01, h - 0.12, w / 6 - 0.01), flapMat);
+    f.position.set(x > 0 ? -0.16 : 0.16, BELT_Y + h / 2, -w / 2 + w / 12 + i * w / 6);
+    g.add(f);
+  }
+  // Açıklığın etrafındaki duvar parçası
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(0.2, 2.6, 2.4), wallMat);
+  wall.position.set(0, 1.3 + (BELT_Y + h) / 2 + 0.05, 0);
+  wall.scale.y = (2.6 - (BELT_Y + h)) / 2.6;
+  wall.position.y = BELT_Y + h + (2.6 - (BELT_Y + h)) / 2 + 0.04;
+  const wallLow = new THREE.Mesh(new THREE.BoxGeometry(0.2, BELT_Y - 0.1, 2.4), wallMat);
+  wallLow.position.y = (BELT_Y - 0.1) / 2;
+  g.add(wall, wallLow);
+  g.position.set(x, 0, BELT_Z);
+  return g;
+}
+scene.add(makeOpening(BELT_LEN / 2 - 0.1), makeOpening(-BELT_LEN / 2 + 0.1));
+
+// ---------- Masa (bandın önünde, oyuncunun çalışma yüzeyi) ----------
+const wood = new THREE.MeshStandardMaterial({ color: 0x5c4129, roughness: 0.8 });
+const desk = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.06, 0.6), wood);
+desk.position.set(0, 0.75, -0.05);
 desk.receiveShadow = true;
 desk.castShadow = true;
 scene.add(desk);
-for (const [x, z] of [[-1, -0.8], [1, -0.8], [-1, 0.2], [1, 0.2]]) {
-  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.72, 0.06), wood);
+for (const [x, z] of [[-0.95, -0.3], [0.95, -0.3], [-0.95, 0.2], [0.95, 0.2]]) {
+  const leg = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.72, 0.05), wood);
   leg.position.set(x, 0.36, z);
-  leg.castShadow = true;
   scene.add(leg);
 }
 const DESK_TOP = 0.78;
 
 // Masa lambası (gövde)
 const lampMetal = new THREE.MeshStandardMaterial({ color: 0x2c3a2e, metalness: 0.7, roughness: 0.4 });
-const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 0.03, 20), lampMetal);
-lampBase.position.set(-0.75, DESK_TOP + 0.015, -0.55);
-const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.52, 8), lampMetal);
-lampArm.position.set(-0.66, DESK_TOP + 0.25, -0.45);
-lampArm.rotation.z = -0.25;
-const lampHead = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.16, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0x2c3a2e, metalness: 0.7, roughness: 0.4, side: THREE.DoubleSide }));
+const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, 0.03, 20), lampMetal);
+lampBase.position.set(-0.9, DESK_TOP + 0.015, -0.28);
+const lampArm = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.55, 8), lampMetal);
+lampArm.position.set(-0.88, DESK_TOP + 0.24, -0.28);
+lampArm.rotation.z = 0.1;
+const lampHead = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.14, 20, 1, true), new THREE.MeshStandardMaterial({ color: 0x2c3a2e, metalness: 0.7, roughness: 0.4, side: THREE.DoubleSide }));
 lampHead.position.copy(lamp.position);
 lampHead.lookAt(lamp.target.position);
 lampHead.rotateX(Math.PI / 2);
-const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffe2a8 }));
-bulb.position.copy(lamp.position).add(new THREE.Vector3(0.02, -0.04, 0.02));
+const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 12), new THREE.MeshBasicMaterial({ color: 0xffe2a8 }));
+bulb.position.copy(lamp.position).add(new THREE.Vector3(0.02, -0.04, -0.02));
 scene.add(lampBase, lampArm, lampHead, bulb);
 
-// ---------- Paket (mühürlü tahta kutu) ----------
+// ---------- Paket türleri ----------
+function shadowAll(g) { g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return g; }
+
 function makeCrate() {
   const g = new THREE.Group();
-  const plank = new THREE.MeshStandardMaterial({ color: 0x8a6a42, roughness: 0.9 });
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.32), plank);
-  body.castShadow = body.receiveShadow = true;
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.26, 0.32), new THREE.MeshStandardMaterial({ color: 0x9a7648, roughness: 0.9 }));
+  body.position.y = 0.13;
   g.add(body);
-  // Tahta çıtalar
-  const slatMat = new THREE.MeshStandardMaterial({ color: 0x6d5132, roughness: 0.9 });
-  for (const y of [-0.09, 0.09]) {
+  const slatMat = new THREE.MeshStandardMaterial({ color: 0x735534, roughness: 0.9 });
+  for (const y of [0.04, 0.22]) {
     const s = new THREE.Mesh(new THREE.BoxGeometry(0.43, 0.035, 0.325), slatMat);
     s.position.y = y;
     g.add(s);
   }
-  // Kırmızı mum mühür
   const seal = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.012, 16), new THREE.MeshStandardMaterial({ color: 0x8e1b16, roughness: 0.4 }));
   seal.rotation.x = Math.PI / 2;
-  seal.position.set(0, 0.02, 0.166);
+  seal.position.set(0, 0.15, 0.166);
   g.add(seal);
-  g.position.set(0.05, DESK_TOP + 0.13, -0.35);
-  g.rotation.y = -0.12;
-  return g;
+  return shadowAll(g);
 }
-const crate = makeCrate();
-scene.add(crate);
 
-// ---------- Manifesto (gönderi belgesi) ----------
-function makeManifestTexture() {
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 700;
-  const x = c.getContext('2d');
-  x.fillStyle = '#d9d0b4'; x.fillRect(0, 0, c.width, c.height);
+function makeSack() {
+  const g = new THREE.Group();
+  const pts = [];
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const r = 0.17 * Math.sin(Math.PI * Math.min(1, t * 1.15)) + 0.02;
+    pts.push(new THREE.Vector2(Math.max(0.03, r), t * 0.36));
+  }
+  const body = new THREE.Mesh(new THREE.LatheGeometry(pts, 20), new THREE.MeshStandardMaterial({ color: 0xa89468, roughness: 1 }));
+  body.scale.set(1.1, 1, 0.85);
+  const tie = new THREE.Mesh(new THREE.TorusGeometry(0.035, 0.008, 8, 16), new THREE.MeshStandardMaterial({ color: 0x3d2b1a }));
+  tie.rotation.x = Math.PI / 2;
+  tie.position.y = 0.33;
+  // Dikiş çizgisi
+  const seam = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.26, 0.005), new THREE.MeshStandardMaterial({ color: 0x5a4a30 }));
+  seam.position.set(0, 0.16, 0.16);
+  g.add(body, tie, seam);
+  return shadowAll(g);
+}
+
+function makeGift() {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.3), new THREE.MeshStandardMaterial({ color: 0x6b2a2a, roughness: 0.7 }));
+  body.position.y = 0.1;
+  const ribbonMat = new THREE.MeshStandardMaterial({ color: 0xc9a54a, roughness: 0.4, metalness: 0.3 });
+  const r1 = new THREE.Mesh(new THREE.BoxGeometry(0.305, 0.205, 0.04), ribbonMat);
+  r1.position.y = 0.1;
+  const r2 = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.205, 0.305), ribbonMat);
+  r2.position.y = 0.1;
+  const bow = new THREE.Mesh(new THREE.TorusKnotGeometry(0.03, 0.01, 32, 6), ribbonMat);
+  bow.position.y = 0.22;
+  g.add(body, r1, r2, bow);
+  return shadowAll(g);
+}
+
+// Her paketin kendi manifestosu var
+const SHIPMENTS = [
+  { make: makeCrate, name: 'Mühürlü tahta kutu', no: '7741-B', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
+    items: ['Ekmek ........ 1 adet', 'Kitap ........ 2 adet', 'Yün çorap .... 1 çift'], kg: '1.20' },
+  { make: makeSack, name: 'Dikişli çuval', no: '7742-A', to: 'Mahkûm #0418', from: 'M. Dragan (Anne)',
+    items: ['Kazak ........ 1 adet', 'Konserve ..... 3 adet', 'Sabun ........ 2 adet'], kg: '2.40' },
+  { make: makeGift, name: 'Hediye paketi', no: '7743-C', to: 'Mahkûm #1107', from: 'L. Petrov (Kızı)',
+    items: ['Pasta ........ 1 adet', 'Oyuncak ayı .. 1 adet', 'Mektup ....... 1 adet'], kg: '1.00' },
+];
+let shipmentIndex = 0;
+
+// ---------- Manifesto (masada, aktif paketin belgesi) ----------
+const manifestCanvas = document.createElement('canvas');
+manifestCanvas.width = 512; manifestCanvas.height = 700;
+const manifestTex = new THREE.CanvasTexture(manifestCanvas);
+manifestTex.colorSpace = THREE.SRGBColorSpace;
+
+function drawManifest(s) {
+  const x = manifestCanvas.getContext('2d');
+  x.fillStyle = '#d9d0b4'; x.fillRect(0, 0, 512, 700);
   x.fillStyle = '#2a241a';
-  x.font = 'bold 34px Courier New'; x.fillText('GÖNDERİ MANİFESTOSU', 40, 70);
-  x.font = '22px Courier New';
-  x.fillText('No: 7741-B', 40, 120);
-  x.fillText('Alıcı: Mahkûm #2291', 40, 155);
-  x.fillText('Gönderen: E. Varga (Eş)', 40, 190);
-  x.fillRect(40, 215, 432, 2);
-  x.fillText('İÇERİK:', 40, 260);
-  x.fillText('- Ekmek ........ 1 adet', 40, 300);
-  x.fillText('- Kitap ........ 2 adet', 40, 335);
-  x.fillText('- Yün çorap .... 1 çift', 40, 370);
-  x.fillRect(40, 400, 432, 2);
-  x.fillText('Toplam ağırlık: 1.20 kg', 40, 445);
+  if (!s) {
+    x.font = 'italic 24px Courier New';
+    x.fillText('— Paket bekleniyor —', 110, 350);
+  } else {
+    x.font = 'bold 34px Courier New'; x.fillText('GÖNDERİ MANİFESTOSU', 40, 70);
+    x.font = '22px Courier New';
+    x.fillText('No: ' + s.no, 40, 120);
+    x.fillText('Alıcı: ' + s.to, 40, 155);
+    x.fillText('Gönderen: ' + s.from, 40, 190);
+    x.fillRect(40, 215, 432, 2);
+    x.fillText('İÇERİK:', 40, 260);
+    s.items.forEach((it, i) => x.fillText('- ' + it, 40, 300 + i * 35));
+    x.fillRect(40, 410, 432, 2);
+    x.fillText('Toplam ağırlık: ' + s.kg + ' kg', 40, 455);
+  }
   x.font = 'italic 18px Courier New';
   x.fillText('Devlet Ceza İnfaz Kurumu — Form 12', 40, 660);
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return t;
+  manifestTex.needsUpdate = true;
 }
+drawManifest(null);
+
 const manifest = new THREE.Mesh(
   new THREE.PlaneGeometry(0.21, 0.29),
-  new THREE.MeshStandardMaterial({ map: makeManifestTexture(), roughness: 1, color: 0x9a9384 })
+  new THREE.MeshStandardMaterial({ map: manifestTex, roughness: 1, color: 0xa8a293 })
 );
 manifest.rotation.x = -Math.PI / 2;
 manifest.rotation.z = 0.08;
-manifest.position.set(-0.4, DESK_TOP + 0.001, -0.05);
+manifest.position.set(-0.45, DESK_TOP + 0.001, 0.0);
 manifest.receiveShadow = true;
 scene.add(manifest);
 
@@ -201,64 +331,155 @@ function makeStamp(color, x) {
   const knob = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), handle.material);
   knob.position.y = 0.11;
   g.add(base, handle, knob);
-  g.traverse(o => o.castShadow = true);
-  g.position.set(x, DESK_TOP, 0.1);
+  shadowAll(g);
+  // Görünmez, daha geniş tıklama alanı
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.16, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.07;
+  g.add(hit);
+  g.position.set(x, DESK_TOP, 0.05);
+  g.userData.baseY = DESK_TOP;
   return g;
 }
-const stampApprove = makeStamp(0x2f5a2c, 0.55);
-const stampSeize = makeStamp(0x7a1d18, 0.72);
+const stampApprove = makeStamp(0x2f6a2c, 0.5);
+const stampSeize = makeStamp(0x8a1d18, 0.68);
 scene.add(stampApprove, stampSeize);
 
-// ---------- Etkileşim (hover) ----------
+// ---------- Bant üzerindeki paket akışı ----------
+// Durumlar: 'incoming' (sağdan gelir) → 'inspect' (önümüzde durur) → 'outgoing' (sola gider)
+let current = null;
+let processed = 0;
+const QUOTA = 5;
+const quotaEl = document.getElementById('quota');
+
+function spawnNext() {
+  const s = SHIPMENTS[shipmentIndex % SHIPMENTS.length];
+  shipmentIndex++;
+  const mesh = s.make();
+  mesh.position.set(SPAWN_X, BELT_Y, BELT_Z);
+  mesh.rotation.y = (Math.random() - 0.5) * 0.3;
+  scene.add(mesh);
+  current = { s, mesh, state: 'incoming' };
+}
+
+let outgoing = [];
+function decide(verdict) {
+  if (!current || current.state !== 'inspect') return;
+  current.verdict = verdict;
+  current.state = 'outgoing';
+  outgoing.push(current);
+  current = null;
+  processed++;
+  quotaEl.textContent = processed + ' / ' + QUOTA;
+  drawManifest(null);
+  setTimeout(spawnNext, 900);
+}
+
+// Damga basma animasyonu
+const stampAnims = [];
+function pressStamp(stamp) {
+  stampAnims.push({ stamp, t: 0 });
+}
+
+spawnNext();
+
+// ---------- Etkileşim ----------
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const hint = document.getElementById('hint');
-const hoverables = [
-  { obj: crate, text: 'Mühürlü tahta kutu — (sonraki adım: aç / incele)' },
-  { obj: manifest, text: 'Gönderi manifestosu — Ekmek, 2 Kitap, Yün çorap · 1.20 kg' },
-  { obj: stampApprove, text: 'ONAY damgası' },
-  { obj: stampSeize, text: 'EL KOY damgası' },
-];
 addEventListener('mousemove', e => {
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
+});
+
+function hoverTarget() {
+  raycaster.setFromCamera(mouse, camera);
+  const list = [
+    { obj: stampApprove, id: 'approve', text: 'ONAY damgası — tıkla' },
+    { obj: stampSeize, id: 'seize', text: 'EL KOY damgası — tıkla' },
+    { obj: manifest, id: 'manifest', text: current ? 'Manifesto — ' + current.s.no : 'Manifesto — paket bekleniyor' },
+  ];
+  if (current) list.push({ obj: current.mesh, id: 'package', text: current.s.name + (current.state === 'inspect' ? ' — (sonraki adım: aç / incele)' : ' — bantta geliyor') });
+  let best = null, bestD = Infinity;
+  for (const h of list) {
+    const hit = raycaster.intersectObject(h.obj, true)[0];
+    if (hit && hit.distance < bestD) { best = h; bestD = hit.distance; }
+  }
+  return best;
+}
+
+addEventListener('click', () => {
+  const h = hoverTarget();
+  if (!h) return;
+  if (h.id === 'approve' || h.id === 'seize') {
+    if (!current || current.state !== 'inspect') return;
+    pressStamp(h.id === 'approve' ? stampApprove : stampSeize);
+    setTimeout(() => decide(h.id), 250);
+  }
 });
 
 // ---------- Jeneratör / ışık ----------
 const DAY_LENGTH = 180; // saniye
 let lightLeft = DAY_LENGTH;
 const lightFill = document.getElementById('light-fill');
+const LAMP_MAX = 6, CEIL_MAX = 14;
+const bulbColor = new THREE.Color(0xffe2a8);
 
 // ---------- Döngü ----------
 const clock = new THREE.Clock();
 function tick() {
-  const dt = clock.getDelta();
+  const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
   // Fareyle hafif kafa hareketi
-  camera.position.x = CAM_BASE.x + mouse.x * 0.12;
-  camera.position.y = CAM_BASE.y + mouse.y * 0.05;
-  camera.lookAt(lookTarget.x + mouse.x * 0.5, lookTarget.y + mouse.y * 0.3, lookTarget.z);
+  camera.position.x = CAM_BASE.x + mouse.x * 0.04;
+  camera.position.y = CAM_BASE.y + mouse.y * 0.02;
+  camera.lookAt(lookTarget.x + mouse.x * 0.12, lookTarget.y + mouse.y * 0.06, lookTarget.z);
 
-  // Işık azalır; azaldıkça titreme artar
+  // Bant hareketi: sadece bir şey taşınırken döner
+  const beltMoving = (current && current.state === 'incoming') || outgoing.length > 0;
+  if (beltMoving) beltTex.offset.x += (BELT_SPEED * dt) / 0.4;
+
+  if (current && current.state === 'incoming') {
+    current.mesh.position.x = Math.max(INSPECT_X, current.mesh.position.x - BELT_SPEED * dt);
+    if (current.mesh.position.x === INSPECT_X) {
+      current.state = 'inspect';
+      drawManifest(current.s);
+    }
+  }
+  outgoing = outgoing.filter(o => {
+    o.mesh.position.x -= BELT_SPEED * dt;
+    if (o.mesh.position.x < EXIT_X) { scene.remove(o.mesh); return false; }
+    return true;
+  });
+
+  // Damga animasyonu: kalk → bas → geri dön
+  for (let i = stampAnims.length - 1; i >= 0; i--) {
+    const a = stampAnims[i];
+    a.t += dt;
+    const p = a.t / 0.4;
+    a.stamp.position.y = a.stamp.userData.baseY + Math.sin(Math.min(1, p) * Math.PI) * 0.06;
+    if (p >= 1) { a.stamp.position.y = a.stamp.userData.baseY; stampAnims.splice(i, 1); }
+  }
+
+  // Jeneratör: ışık azalır; azaldıkça titreme artar
   lightLeft = Math.max(0, lightLeft - dt);
   const ratio = lightLeft / DAY_LENGTH;
   lightFill.style.width = (ratio * 100) + '%';
-  const flickerChance = 0.01 + (1 - ratio) * 0.15;
-  let intensity = 9 * (0.35 + 0.65 * ratio);
-  if (Math.random() < flickerChance) intensity *= Math.random() * 0.5;
-  intensity *= 0.97 + Math.sin(t * 50) * 0.03;
-  lamp.intensity = ratio > 0 ? intensity : 0;
-  bulb.material.color.setScalar(0.3 + 0.7 * (lamp.intensity / 9)).multiply(new THREE.Color(0xffe2a8));
+  const flickerChance = 0.005 + (1 - ratio) * 0.12;
+  let k = 0.45 + 0.55 * ratio;
+  if (Math.random() < flickerChance) k *= Math.random() * 0.5;
+  k *= 0.98 + Math.sin(t * 50) * 0.02;
+  if (ratio === 0) k = 0;
+  lamp.intensity = LAMP_MAX * k;
+  ceiling.intensity = CEIL_MAX * k;
+  ambient.intensity = 0.15 + 0.75 * k;
+  tube.material.color.setScalar(0.15 + 0.85 * k);
+  bulb.material.color.copy(bulbColor).multiplyScalar(0.3 + 0.7 * k);
 
   // Hover
-  raycaster.setFromCamera(mouse, camera);
-  let found = null;
-  for (const h of hoverables) {
-    if (raycaster.intersectObject(h.obj, true).length) { found = h; break; }
-  }
-  hint.textContent = found ? found.text : 'Fare ile etrafa bak · Nesnelerin üzerine gel';
-  document.body.style.cursor = found ? 'pointer' : 'default';
+  const h = hoverTarget();
+  hint.textContent = h ? h.text : 'Fare ile etrafa bak · Paket banttan gelir, damgaya tıklayınca geçer';
+  document.body.style.cursor = h && h.id !== 'manifest' ? 'pointer' : 'default';
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
