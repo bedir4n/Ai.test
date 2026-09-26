@@ -10,7 +10,6 @@
     --dim: #8a806a;
     --red: #c2402f;
     --green: #6fa35a;
-    --uv: #a77bff;
     --bg: #0b0b0a;
     --panel: rgba(10,9,7,.8);
     --line: #3a342a;
@@ -31,13 +30,16 @@
   #hint { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--ink); text-align: center; background: var(--panel); padding: 4px 10px; border: 1px solid var(--line); white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
   #hint:empty { display: none; }
   #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%); transition: background .3s; }
-  body.uv #vignette { background: radial-gradient(ellipse at center, rgba(40,10,80,.15) 40%, rgba(5,0,15,.8) 100%); }
 
-  #tools { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
+  #tools { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; pointer-events: auto; width: max-content; max-width: calc(100vw - 32px); }
+  #tools .sep { font-size: 11px; color: var(--dim); letter-spacing: .05em; padding: 0 2px 0 8px; }
+  #tools i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; }
+  #tools button[data-mode="metal"].active { border-color: #ff6a5a; color: #ff8a7a; }
+  #tools button[data-mode="organic"].active { border-color: #ffd23a; color: #ffe07a; }
+  #tools button[data-mode="ink"].active { border-color: #4ab8ff; color: #8ad0ff; }
   #tools button { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 8px 12px; cursor: pointer; }
   #tools button kbd { color: var(--dim); font-family: inherit; margin-right: 4px; }
   #tools button.active { border-color: var(--ink); background: #2a251c; }
-  #tools button[data-tool="uv"].active { border-color: var(--uv); color: var(--uv); }
   #tools button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
   #toast { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); font-size: 15px; font-weight: bold; padding: 8px 16px; background: var(--panel); border: 1px solid var(--line); opacity: 0; transition: opacity .3s; text-align: center; max-width: calc(100vw - 32px); }
@@ -65,10 +67,10 @@
   <div id="vignette"></div>
   <div class="panel" id="top-left">
     <div><span class="label">GÜN</span> <b id="day">1</b></div>
-    <div><span class="label">GÜNÜN KURALI:</span> <span id="rule">Silah, mühimmat, kesici alet ve gizli mesaj YASAK</span></div>
+    <div><span class="label">GÜNÜN KURALI:</span> <span id="rule">Silah, mühimmat, kesici alet, uyuşturucu ve gizli mesaj YASAK</span></div>
   </div>
   <div class="panel" id="top-right">
-    <div><span class="label">DOĞRU KARAR</span> <b id="quota">0 / 5</b></div>
+    <div><span class="label">DOĞRU KARAR</span> <b id="quota">0 / 6</b></div>
     <div><span class="label">İHLAL</span> <b id="violations">0</b></div>
     <div><span class="label">JENERATÖR</span></div>
     <div id="light-bar"><div id="light-fill"></div></div>
@@ -79,7 +81,10 @@
   <div id="tools">
     <button data-tool="hand"><kbd>Esc</kbd>El</button>
     <button data-tool="knife"><kbd>1</kbd>Neşter</button>
-    <button data-tool="uv"><kbd>2</kbd>UV Fener</button>
+    <span class="sep">VİZÖR · sağ tık basılı tut</span>
+    <button data-mode="metal"><kbd>2</kbd><i style="background:#ff4a3a"></i>Metal</button>
+    <button data-mode="organic"><kbd>3</kbd><i style="background:#ffd23a"></i>Organik</button>
+    <button data-mode="ink"><kbd>4</kbd><i style="background:#4ab8ff"></i>Mürekkep</button>
   </div>
 </div>
 <div id="overlay" hidden></div>
@@ -388,7 +393,8 @@ const SFX = {
   buzz: () => tone(110, 0.55, { type: 'sawtooth', gain: 0.1 }),
   good: () => { tone(660, 0.1, { gain: 0.08 }); setTimeout(() => tone(880, 0.16, { gain: 0.08 }), 100); },
   aha: () => { tone(520, 0.12, { type: 'triangle', gain: 0.12 }); setTimeout(() => tone(780, 0.28, { type: 'triangle', gain: 0.12 }), 110); },
-  uv: () => tone(55, 0.35, { type: 'sawtooth', gain: 0.05 }),
+  scan: () => tone(55, 0.35, { type: 'sawtooth', gain: 0.05 }),
+  miss: () => noise(0.12, { freq: 900, q: 1, gain: 0.2 }),
 };
 
 // ---------- Basit animasyon (tween) sistemi ----------
@@ -415,7 +421,7 @@ function updateTweens(dt) {
 // ---------- Kaçak nesneler ----------
 const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...extra });
 const CONTRABAND = {
-  magazine: { name: 'Tabanca şarjörü', make() {
+  magazine: { name: 'Tabanca şarjörü', kind: 'metal', size: 0.03, make() {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.075, 0.045), std(0x1a1a1a, { metalness: 0.7, roughness: 0.4 }));
     body.rotation.z = 0.12;
@@ -423,7 +429,7 @@ const CONTRABAND = {
     tip.position.set(0.004, 0.042, 0.01);
     g.add(body, tip);
     return g; } },
-  razors: { name: 'Jilet (3 adet)', make() {
+  razors: { name: 'Jilet (3 adet)', kind: 'metal', size: 0.022, make() {
     const g = new THREE.Group();
     const m = std(0xdfe4e6, { metalness: 1, roughness: 0.2 });
     for (let i = 0; i < 3; i++) {
@@ -433,7 +439,7 @@ const CONTRABAND = {
       g.add(b);
     }
     return g; } },
-  bullets: { name: 'Tabanca mermisi (6 adet)', make() {
+  bullets: { name: 'Tabanca mermisi (6 adet)', kind: 'metal', size: 0.022, make() {
     const g = new THREE.Group();
     const brass = std(0xc9a040, { metalness: 0.9, roughness: 0.3 });
     const lead = std(0x777777, { metalness: 0.6, roughness: 0.4 });
@@ -446,9 +452,22 @@ const CONTRABAND = {
       g.add(c, h);
     }
     return g; } },
+  pills: { name: 'Uyuşturucu paketi', kind: 'organic', size: 0.026, make() {
+    const g = new THREE.Group();
+    const bag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.014, 0.032), std(0xe8e4d8, { roughness: 0.3, transparent: true, opacity: 0.85 }));
+    bag.position.y = 0.007;
+    const knot = new THREE.Mesh(new THREE.SphereGeometry(0.006, 8, 6), bag.material);
+    knot.position.set(0.026, 0.008, 0);
+    g.add(bag, knot);
+    for (let i = 0; i < 5; i++) {
+      const pill = new THREE.Mesh(new THREE.SphereGeometry(0.004, 8, 6), std(0xd9e8f0, { roughness: 0.4 }));
+      pill.position.set((Math.random() - 0.5) * 0.03, 0.016, (Math.random() - 0.5) * 0.02);
+      g.add(pill);
+    }
+    return g; } },
 };
 
-// UV mürekkebi: normalde görünmez, UV fener yaklaşınca parlar
+// Gizli mürekkep: çıplak gözle görünmez; yalnızca vizörün Mürekkep modunda merceğe düşer: normalde görünmez, UV fener yaklaşınca parlar
 function makeUvMark(lines, w, h) {
   const c = document.createElement('canvas');
   c.width = 320; c.height = 200;
@@ -463,7 +482,7 @@ function makeUvMark(lines, w, h) {
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
-    map: t, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+    map: t, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }));
 }
 
 // ---------- İncelenebilir eşyalar ----------
@@ -472,7 +491,7 @@ const halfCyl = (r, h, s, mat) => new THREE.Mesh(new THREE.CylinderGeometry(r, r
 const cutFace = (w, h, s, mat) => { const f = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); f.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; return f; };
 
 const ITEMS = {
-  cake: { name: 'Doğum günü pastası', w: 0.2, uv: { pos: [0, 0.0755, 0.02], rotX: -Math.PI / 2, w: 0.1, h: 0.062 },
+  cake: { name: 'Doğum günü pastası', w: 0.2, precise: true, hiddenY: 0.03, spot: [0.05, 0.04], uv: { pos: [0, 0.0755, 0.02], rotX: -Math.PI / 2, w: 0.1, h: 0.062 },
     make() {
       const g = new THREE.Group();
       const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 28), std(0x7a4426));
@@ -501,7 +520,7 @@ const ITEMS = {
       return { halves, spread: 0.035, hiddenY: 0.03 };
     } },
 
-  can: { name: 'Konserve', w: 0.09, uv: { pos: [0, 0.045, 0.037], rotX: 0, w: 0.06, h: 0.038 },
+  can: { name: 'Konserve', w: 0.09, hiddenY: 0.06, uv: { pos: [0, 0.045, 0.037], rotX: 0, w: 0.06, h: 0.038 },
     make() {
       const g = new THREE.Group();
       const metal = std(0xa0a6a6, { metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide });
@@ -527,7 +546,7 @@ const ITEMS = {
       return { halves: [], spread: 0, hiddenY: 0.07 };
     } },
 
-  bear: { name: 'Peluş ayı', w: 0.11, uv: { pos: [0, 0.047, 0.046], rotX: -0.35, w: 0.07, h: 0.044 },
+  bear: { name: 'Peluş ayı', w: 0.11, hiddenY: 0.045, uv: { pos: [0, 0.047, 0.046], rotX: -0.35, w: 0.07, h: 0.044 },
     make(data) {
       const g = new THREE.Group();
       const fur = std(0x7a5634, { roughness: 1 });
@@ -585,7 +604,7 @@ const ITEMS = {
 };
 
 // ---------- Günün sevkiyatları ----------
-// declared: manifestoda yazan ağırlık (g) · real: terazide çıkan · hidden: içindeki kaçak · uv: UV mürekkebiyle yazılmış mesaj
+// declared: manifestoda yazan ağırlık (g) · real: terazide çıkan · hidden: içindeki kaçak · uv: gizli mürekkeple yazılmış mesaj
 const SHIPMENTS = [
   { make: makeGift, name: 'Hediye paketi', no: '7741-B', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
     contents: [{ key: 'cake', declared: 1000, real: 1320, hidden: 'magazine' }],
@@ -599,14 +618,17 @@ const SHIPMENTS = [
   { make: makeSack, name: 'Dikişli çuval', no: '7744-A', to: 'Mahkûm #0733', from: 'I. Kovacs (Kardeş)',
     contents: [{ key: 'bear', declared: 250, real: 247 }, { key: 'can', declared: 400, real: 404 }],
     illegal: null },
+  { make: makeGift, name: 'Hediye paketi', no: '7745-E', to: 'Mahkûm #1520', from: 'R. Ionescu (Annesi)',
+    contents: [{ key: 'cake', declared: 800, real: 862, hidden: 'pills' }],
+    illegal: 'Pastanın içinde uyuşturucu paketi vardı.' },
   { make: makeCrate, name: 'Mühürlü tahta kutu', no: '7745-D', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
     contents: [{ key: 'can', declared: 400, real: 401 }, { key: 'can', declared: 400, real: 562, hidden: 'bullets' }],
     illegal: 'Konservelerden birinde mermi vardı.' },
   { make: makeGift, name: 'Hediye paketi', no: '7746-B', to: 'Mahkûm #0418', from: 'A. Dragan (Eşi)',
     contents: [{ key: 'cake', declared: 900, real: 904 }, { key: 'bear', declared: 250, real: 252, uv: ['KAÇIŞ', 'ÇAMAŞIRHANE 03:00'] }],
-    illegal: 'Ayının üzerinde UV mürekkeple yazılmış firar mesajı vardı.' },
+    illegal: 'Ayının üzerinde gizli mürekkeple yazılmış firar mesajı vardı.' },
 ];
-const QUOTA = 5;
+const QUOTA = 6;
 
 // ---------- Manifesto ----------
 function manifestLines(s) {
@@ -781,11 +803,87 @@ const BIN_POS = new THREE.Vector3(1.36, 0, -0.22);
   scene.add(bin);
 }
 
-// ---------- UV fener ----------
-const uvLight = new THREE.SpotLight(0x8f5bff, 0, 2.5, 0.2, 0.55, 1);
-scene.add(uvLight, uvLight.target);
-const deskPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(DESK_TOP + 0.05));
-const cursorPoint = new THREE.Vector3(0, DESK_TOP, 0);
+// ---------- Spektrum vizörü ----------
+// Kaçakların "izi" ayrı bir katmanda (layer 1) durur. Vizör açıkken bu katman ayrı bir
+// hedefe çizilir ve imlecin etrafındaki yuvarlak merceğe bulanık bir leke olarak basılır.
+// (Unreal'daki Custom Depth/Stencil maskesinin tarayıcıdaki karşılığı.)
+const VISOR = {
+  metal:   { label: 'METAL',    color: new THREE.Color(0xff4a3a), blur: 0.0045 },
+  organic: { label: 'ORGANİK',  color: new THREE.Color(0xffd23a), blur: 0.0045 },
+  ink:     { label: 'MÜREKKEP', color: new THREE.Color(0x4ab8ff), blur: 0.0006 },
+};
+const VISOR_DRAIN = 4;      // vizör açıkken jeneratör fazladan bu kat hızla tükenir
+const LENS_RADIUS = 0.14;   // ekran yüksekliğine oranla
+let visorMode = 'metal';
+let scanning = false;
+
+const sigTarget = new THREE.WebGLRenderTarget(1, 1);
+function sizeSig() { const v = renderer.getDrawingBufferSize(new THREE.Vector2()); sigTarget.setSize(v.x, v.y); }
+sizeSig();
+const lensMat = new THREE.ShaderMaterial({
+  uniforms: {
+    tSig: { value: sigTarget.texture }, uMouse: { value: new THREE.Vector2(0.5, 0.5) },
+    uAspect: { value: 1 }, uRadius: { value: LENS_RADIUS }, uTime: { value: 0 },
+    uTint: { value: new THREE.Color() }, uBlur: { value: 0.004 },
+  },
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
+  fragmentShader: `
+    uniform sampler2D tSig; uniform vec2 uMouse; uniform float uAspect, uRadius, uTime, uBlur; uniform vec3 uTint;
+    varying vec2 vUv;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+    void main() {
+      vec2 d = vUv - uMouse; d.x *= uAspect;
+      float r = length(d);
+      if (r > uRadius) discard;
+      vec4 s = vec4(0.0); float tot = 0.0;
+      for (int i = -3; i <= 3; i++) for (int j = -3; j <= 3; j++) {
+        float w = 1.0 / (1.0 + float(i * i + j * j));
+        s += texture2D(tSig, vUv + vec2(float(i) / uAspect, float(j)) * uBlur) * w; tot += w;
+      }
+      s /= tot;
+      float sig = max(max(s.r, s.g), s.b) * s.a;
+      float n = hash(vUv * vec2(900.0, 600.0) + fract(uTime) * 50.0);
+      float lines = 0.85 + 0.15 * sin(vUv.y * 500.0 - uTime * 12.0);
+      float pulse = 0.8 + 0.2 * sin(uTime * 6.0);
+      vec3 col = uTint * (0.06 + n * 0.1) + uTint * sig * 2.4 * pulse;
+      float ring = smoothstep(uRadius - 0.007, uRadius - 0.002, r);
+      col = mix(col * lines, uTint, ring);
+      gl_FragColor = vec4(col, mix(0.7 + sig * 0.3, 1.0, ring));
+    }`,
+  transparent: true, depthTest: false, depthWrite: false,
+});
+const lensScene = new THREE.Scene();
+lensScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), lensMat));
+const lensCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+function renderLens(t) {
+  if (current) for (const it of current.items) for (const m of it.sigs || []) m.visible = m.userData.kind === visorMode;
+  const bg = scene.background, fog = scene.fog;
+  scene.background = null; scene.fog = null;
+  camera.layers.set(1);
+  renderer.setRenderTarget(sigTarget);
+  renderer.setClearColor(0x000000, 0);
+  renderer.render(scene, camera);
+  camera.layers.set(0);
+  scene.background = bg; scene.fog = fog;
+  renderer.setRenderTarget(null);
+  const v = VISOR[visorMode];
+  lensMat.uniforms.uMouse.value.set((mouse.x + 1) / 2, (mouse.y + 1) / 2);
+  lensMat.uniforms.uAspect.value = innerWidth / innerHeight;
+  lensMat.uniforms.uTime.value = t;
+  lensMat.uniforms.uTint.value.copy(v.color);
+  lensMat.uniforms.uBlur.value = v.blur;
+  renderer.autoClear = false;
+  renderer.render(lensScene, lensCam);
+  renderer.autoClear = true;
+}
+
+// Bir noktanın ekranda merceğin merkezine uzaklığı (mercek yarıçapı cinsinden)
+function lensGap(worldPos) {
+  const p = worldPos.clone().project(camera);
+  const dx = (p.x - mouse.x) / 2 * (innerWidth / innerHeight), dy = (p.y - mouse.y) / 2;
+  return Math.hypot(dx, dy) / LENS_RADIUS;
+}
 
 // ---------- Alet seçimi ----------
 let tool = 'hand';
@@ -793,18 +891,32 @@ const toolButtons = document.querySelectorAll('#tools button');
 function setTool(t) {
   if (t === tool) t = 'hand';
   tool = t;
-  toolButtons.forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
-  document.body.classList.toggle('uv', tool === 'uv');
-  if (tool === 'uv') SFX.uv();
+  toolButtons.forEach(b => { if (b.dataset.tool) b.classList.toggle('active', b.dataset.tool === tool); });
+}
+function setVisorMode(m) {
+  visorMode = m;
+  toolButtons.forEach(b => { if (b.dataset.mode) b.classList.toggle('active', b.dataset.mode === m); });
+  if (scanning) SFX.scan();
 }
 setTool('hand');
-toolButtons.forEach(b => b.addEventListener('click', e => { e.stopPropagation(); setTool(b.dataset.tool); b.blur(); }));
+setVisorMode('metal');
+toolButtons.forEach(b => b.addEventListener('click', e => {
+  e.stopPropagation();
+  if (b.dataset.tool) setTool(b.dataset.tool); else setVisorMode(b.dataset.mode);
+  b.blur();
+}));
 addEventListener('keydown', e => {
   if (e.key === '1') setTool('knife');
-  else if (e.key === '2') setTool('uv');
-  else if (e.key === 'Escape') { tool = 'uv'; setTool('hand'); }
+  else if (e.key === '2') setVisorMode('metal');
+  else if (e.key === '3') setVisorMode('organic');
+  else if (e.key === '4') setVisorMode('ink');
+  else if (e.key === 'Escape') { tool = 'x'; setTool('hand'); }
 });
-renderer.domElement.addEventListener('contextmenu', e => { e.preventDefault(); tool = 'x'; setTool('hand'); });
+// Sağ tuş basılıyken vizör açık
+renderer.domElement.addEventListener('contextmenu', e => e.preventDefault());
+renderer.domElement.addEventListener('pointerdown', e => { if (e.button === 2 && !dayOver) { audio(); scanning = true; SFX.scan(); } });
+addEventListener('pointerup', e => { if (e.button === 2) scanning = false; });
+addEventListener('blur', () => { scanning = false; });
 
 // ---------- Bildirim ----------
 const toastEl = document.getElementById('toast');
@@ -868,6 +980,22 @@ function openPackage() {
       model.add(uvMark);
     }
     shadowAll(model);
+    // Vizör izleri: kaçağın yeri her oyunda biraz değişir
+    const sigs = [];
+    let blob = null;
+    if (data.hidden) {
+      const cb = CONTRABAND[data.hidden];
+      const sp = def.spot || [0, 0];
+      const sx = (Math.random() < 0.5 ? -1 : 1) * sp[0] * (0.5 + Math.random() * 0.5);
+      const sz = (Math.random() * 2 - 1) * sp[1];
+      blob = new THREE.Mesh(new THREE.SphereGeometry(cb.size, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+      blob.position.set(sx, def.hiddenY, sz);
+      blob.layers.set(1);
+      blob.userData.kind = cb.kind;
+      model.add(blob);
+      sigs.push(blob);
+    }
+    if (uvMark) { uvMark.layers.set(1); uvMark.userData.kind = 'ink'; sigs.push(uvMark); }
     const obj = new THREE.Group();
     obj.add(model);
     obj.position.copy(top);
@@ -875,7 +1003,7 @@ function openPackage() {
     scene.add(obj);
     const slot = new THREE.Vector3(x + def.w / 2, DESK_TOP, ITEM_ROW_Z);
     x += def.w + 0.03;
-    const it = { obj, model, def, data, slot, name: def.name, uvMark, onScale: false, cut: false, extracted: false };
+    const it = { obj, model, def, data, slot, name: def.name, uvMark, blob, sigs, onScale: false, cut: false, extracted: false };
     c.items.push(it);
     tween(obj, slot, { dur: 0.55, arc: 0.12, delay: 0.35 + i * 0.2,
       done: () => { SFX.pop(); if (i === c.s.contents.length - 1) c.state = 'open'; } });
@@ -898,16 +1026,37 @@ function toggleScale(it) {
     done: () => { it.busy = false; it.onScale = true; scaleTarget = weightOf(it); SFX.beep(); } });
 }
 
-function cutItem(it) {
+const INCISION_COST = 6; // boş kesik jeneratörden bu kadar saniye yer
+const tmpV = new THREE.Vector3();
+
+// Neşter yalnızca saplandığı yeri açar: zula tam oradaysa eşya ikiye ayrılır,
+// değilse küçük bir kesik kalır. Temiz eşyada da aynı kesik çıkar, yani kesik tek başına bir şey söylemez.
+function incision(it, point) {
+  const local = it.model.worldToLocal(point.clone());
+  const scar = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.004, 0.005), std(0x2a1408));
+  scar.position.copy(local);
+  scar.rotation.y = Math.random() * Math.PI;
+  it.model.add(scar);
+  SFX.cut();
+  lightLeft = Math.max(0, lightLeft - INCISION_COST);
+  toast('Kesikte bir şey yok.');
+}
+
+function cutItem(it, point) {
   if (it.cut || it.busy) return;
   if (!it.def.cut) { toast('Bu eşya neşterle kesilemez.'); return; }
+  if (it.def.precise) {
+    // Vizörde görülen lekeye nişan alınır: bakış çizgisi lekenin içinden geçmeli
+    const onSpot = it.blob && raycaster.ray.distanceToPoint(it.blob.getWorldPosition(tmpV)) < 0.03;
+    if (!onSpot) { incision(it, point); return; }
+  }
   it.cut = true;
   SFX.cut();
   const hidden = it.data.hidden;
   const res = it.def.cut(it.model, !!hidden);
   shadowAll(it.model);
   for (const { h, s } of res.halves) tween(h, new THREE.Vector3(s * res.spread, 0, 0), { dur: 0.35 });
-  // UV yazısı kumaşla birlikte bir yarıda kalır
+  // Gizli yazı kumaşla birlikte bir yarıda kalır
   if (it.uvMark && res.halves.length) { it.model.remove(it.uvMark); res.halves[0].h.add(it.uvMark); }
   if (hidden) {
     const cb = CONTRABAND[hidden];
@@ -916,10 +1065,12 @@ function cutItem(it) {
     // Küçük nesne: tıklaması kolay olsun diye görünmez geniş alan
     const hit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.07), new THREE.MeshBasicMaterial({ visible: false }));
     cbObj.add(hit);
-    cbObj.position.copy(it.obj.position).add(new THREE.Vector3(0, res.hiddenY, 0));
+    it.blob.getWorldPosition(cbObj.position);
+    it.model.remove(it.blob);
+    it.sigs = it.sigs.filter(m => m !== it.blob);
     cbObj.visible = false;
     scene.add(cbObj);
-    tween(cbObj, cbObj.position.clone().add(new THREE.Vector3(0, 0.04, 0)), { dur: 0.4, delay: 0.35,
+    tween(cbObj, new THREE.Vector3(it.obj.position.x, cbObj.position.y + 0.05, it.obj.position.z), { dur: 0.4, delay: 0.35,
       done: () => { SFX.aha(); toast('Bir şey var! ' + cb.name, 'aha'); } });
     current.items.push({ obj: cbObj, name: cb.name, contraband: true, parent: it, inTray: false });
   } else {
@@ -1028,7 +1179,7 @@ const canDecide = () => current && (current.state === 'desk' || current.state ==
 function itemHint(it) {
   if (it.contraband) return it.inTray ? `KAÇAK: ${it.name} (delil tepsisinde)` : `KAÇAK: ${it.name} — tıkla: delil tepsisine koy`;
   if (tool === 'knife') return it.cut ? `${it.name} — kesildi` : it.def.cut ? `${it.name} — tıkla: neşterle kes` : `${it.name} — kesilemez`;
-  if (tool === 'uv') return it.uvMark && it.uvMark.material.opacity > 0.4 ? `UV: "${it.data.uv.join(' ')}"` : `${it.name} — UV ışığında iz yok`;
+  if (scanning && visorMode === 'ink' && it.uvFound) return `Gizli yazı: "${it.data.uv.join(' ')}"`;
   return it.onScale ? `${it.name} — terazide: ${weightOf(it)} g · tıkla: geri al` : `${it.name} — tıkla: teraziye koy`;
 }
 
@@ -1051,7 +1202,7 @@ function hoverTarget() {
     const hit = raycaster.intersectObject(h.obj, true)[0];
     if (!hit) continue;
     const d = h.id === 'contraband' ? hit.distance - 1 : hit.distance;
-    if (d < bestD) { best = h; bestD = d; }
+    if (d < bestD) { best = h; bestD = d; best.point = hit.point; }
   }
   if (best && best.it) best.text = itemHint(best.it);
   return best;
@@ -1067,7 +1218,7 @@ renderer.domElement.addEventListener('click', () => {
     else if (current.state === 'desk') openPackage();
   } else if (h.id === 'item') {
     if (tool === 'hand') toggleScale(h.it);
-    else if (tool === 'knife') cutItem(h.it);
+    else if (tool === 'knife') cutItem(h.it, h.point);
   } else if (h.id === 'contraband') {
     moveToTray(h.it);
   } else if (h.id === 'approve' || h.id === 'seize') {
@@ -1135,12 +1286,8 @@ function tick() {
     drawScale(scaleReading);
   }
 
-  // İmlecin masadaki noktası (UV fener buraya tutulur)
-  raycaster.setFromCamera(mouse, camera);
-  raycaster.ray.intersectPlane(deskPlane, cursorPoint);
-
   // Jeneratör: ışık azalır; azaldıkça titreme artar
-  lightLeft = Math.max(0, lightLeft - dt);
+  lightLeft = Math.max(0, lightLeft - dt * (scanning ? 1 + VISOR_DRAIN : 1));
   const ratio = lightLeft / DAY_LENGTH;
   lightFill.style.width = (ratio * 100) + '%';
   const flickerChance = 0.005 + (1 - ratio) * 0.12;
@@ -1148,8 +1295,7 @@ function tick() {
   if (Math.random() < flickerChance) k *= Math.random() * 0.5;
   k *= 0.98 + Math.sin(t * 50) * 0.02;
   if (ratio === 0) k = 0;
-  const uvOn = tool === 'uv' && ratio > 0;
-  const room = uvOn ? k * 0.25 : k;
+  const room = k;
   lamp.intensity = LAMP_MAX * room;
   ceiling.intensity = CEIL_MAX * room;
   ambient.intensity = 0.1 + 0.8 * room;
@@ -1157,35 +1303,32 @@ function tick() {
   bulb.material.color.copy(bulbColor).multiplyScalar(0.3 + 0.7 * room);
   if (ratio === 0 && !dayOver && !darkScheduled) { darkScheduled = true; setTimeout(() => endDay('dark'), 1500); }
 
-  uvLight.intensity = uvOn ? 9 : 0;
-  uvLight.position.set(cursorPoint.x, DESK_TOP + 0.55, cursorPoint.z + 0.3);
-  uvLight.target.position.copy(cursorPoint);
+  if (ratio === 0) scanning = false;
 
-  // UV mürekkebi yalnızca fener yakınken parlar
-  if (current) for (const it of current.items) {
-    if (!it.uvMark) continue;
-    it.uvMark.getWorldPosition(tmp);
-    const d = Math.hypot(tmp.x - cursorPoint.x, tmp.z - cursorPoint.z);
-    it.uvMark.material.opacity = uvOn ? Math.min(1, Math.max(0, (0.16 - d) / 0.08)) : 0;
-    if (it.uvMark.material.opacity > 0.6 && !it.uvFound) {
+  // Gizli yazı merceğin içine girince okunur
+  if (scanning && visorMode === 'ink' && current) for (const it of current.items) {
+    if (!it.uvMark || it.uvFound) continue;
+    if (lensGap(it.uvMark.getWorldPosition(tmp)) < 0.6) {
       it.uvFound = true;
       SFX.aha();
-      toast('UV ışığında gizli yazı: "' + it.data.uv.join(' ') + '"', 'aha');
+      toast('Gizli mürekkep: "' + it.data.uv.join(' ') + '"', 'aha');
     }
   }
 
   // Hover
   const h = dayOver ? null : hoverTarget();
   hint.textContent = h ? h.text : (current && current.state === 'open'
-    ? 'El: teraziye koy · 1 Neşter: kes · 2 UV: gizli yazı ara · Sonra kolu çek'
+    ? (scanning ? `Vizör: ${VISOR[visorMode].label} · açıkken jeneratör ${1 + VISOR_DRAIN} kat hızlı tükenir`
+      : 'El: teraziye koy · 1 Neşter: lekeye sapla · Sağ tık: vizör (2/3/4 mod) · Sonra kolu çek')
     : 'Paket banttan gelir · Tıkla: masaya al → tıkla: aç');
   const clickable = h && (
     ((h.id === 'approve' || h.id === 'seize') && canDecide()) ||
     (h.id === 'package' && (current.state === 'belt' || current.state === 'desk')) ||
-    (h.id === 'item' && tool !== 'uv') || (h.id === 'contraband' && !h.it.inTray));
+    h.id === 'item' || (h.id === 'contraband' && !h.it.inTray));
   renderer.domElement.style.cursor = tool === 'knife' ? 'crosshair' : clickable ? 'pointer' : 'default';
 
   renderer.render(scene, camera);
+  if (scanning) renderLens(t);
   requestAnimationFrame(tick);
 }
 tick();
@@ -1194,6 +1337,7 @@ addEventListener('resize', () => {
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
+  sizeSig();
 });
 </script>
 </body>
