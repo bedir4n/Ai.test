@@ -8,23 +8,56 @@
   :root {
     --ink: #d8cfb8;
     --dim: #8a806a;
-    --red: #b3372c;
+    --red: #c2402f;
+    --green: #6fa35a;
+    --uv: #a77bff;
     --bg: #0b0b0a;
+    --panel: rgba(10,9,7,.8);
+    --line: #3a342a;
   }
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; font-family: "Courier New", monospace; color: var(--ink); }
   canvas { display: block; }
 
   #hud { position: fixed; inset: 0; pointer-events: none; }
-  .panel { position: absolute; background: rgba(10,9,7,.78); border: 1px solid #3a342a; padding: 10px 14px; font-size: 13px; line-height: 1.5; }
-  #top-left { top: 12px; left: 12px; }
+  .panel { position: absolute; background: var(--panel); border: 1px solid var(--line); padding: 10px 14px; font-size: 13px; line-height: 1.5; }
+  #top-left { top: 12px; left: 12px; max-width: min(360px, calc(100vw - 24px)); }
   #top-right { top: 12px; right: 12px; text-align: right; }
   #rule { color: var(--red); font-weight: bold; }
-  .label { color: var(--dim); }
-  #light-bar { width: 160px; height: 6px; background: #1c1a15; margin-top: 4px; }
+  .label { color: var(--dim); letter-spacing: .05em; }
+  #light-bar { width: 160px; height: 6px; background: #1c1a15; margin-top: 4px; margin-left: auto; }
   #light-fill { height: 100%; width: 100%; background: #d9b35a; transition: width .2s linear; }
-  #hint { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); font-size: 12px; color: var(--dim); text-align: center; }
-  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%); }
+  #hint { position: absolute; bottom: 70px; left: 50%; transform: translateX(-50%); font-size: 13px; color: var(--ink); text-align: center; background: var(--panel); padding: 4px 10px; border: 1px solid var(--line); white-space: nowrap; max-width: calc(100vw - 32px); overflow: hidden; text-overflow: ellipsis; }
+  #hint:empty { display: none; }
+  #vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,.6) 100%); transition: background .3s; }
+  body.uv #vignette { background: radial-gradient(ellipse at center, rgba(40,10,80,.15) 40%, rgba(5,0,15,.8) 100%); }
+
+  #tools { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 6px; pointer-events: auto; }
+  #tools button { font: inherit; font-size: 13px; color: var(--ink); background: var(--panel); border: 1px solid var(--line); padding: 8px 12px; cursor: pointer; }
+  #tools button kbd { color: var(--dim); font-family: inherit; margin-right: 4px; }
+  #tools button.active { border-color: var(--ink); background: #2a251c; }
+  #tools button[data-tool="uv"].active { border-color: var(--uv); color: var(--uv); }
+  #tools button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  #toast { position: absolute; top: 90px; left: 50%; transform: translateX(-50%); font-size: 15px; font-weight: bold; padding: 8px 16px; background: var(--panel); border: 1px solid var(--line); opacity: 0; transition: opacity .3s; text-align: center; max-width: calc(100vw - 32px); }
+  #toast.show { opacity: 1; }
+  #toast.good { color: var(--green); border-color: var(--green); }
+  #toast.bad { color: var(--red); border-color: var(--red); }
+  #toast.aha { color: #e8c35a; border-color: #e8c35a; }
+
+  #overlay { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.82); pointer-events: auto; padding: 16px; }
+  #overlay .card { max-width: 460px; width: 100%; border: 1px solid var(--line); background: #13110d; padding: 24px; line-height: 1.6; }
+  #overlay h2 { margin: 0 0 12px; font-size: 20px; letter-spacing: .08em; text-wrap: balance; }
+  #overlay ul { padding-left: 18px; margin: 12px 0; font-size: 13px; }
+  #overlay button { font: inherit; margin-top: 12px; padding: 10px 16px; background: #2a251c; color: var(--ink); border: 1px solid var(--ink); cursor: pointer; }
+  #manifest-panel { top: 96px; left: 12px; width: 290px; max-width: calc(100vw - 24px); background: rgba(217,208,180,.94); color: #2a241a; border-color: #8a806a; }
+  #manifest-panel .label { color: #6b604a; }
+  #manifest-panel .m-title { font-weight: bold; letter-spacing: .08em; margin-bottom: 4px; }
+  #manifest-panel table { width: 100%; border-collapse: collapse; margin: 6px 0; border-top: 1px solid #8a806a; border-bottom: 1px solid #8a806a; font-variant-numeric: tabular-nums; }
+  #manifest-panel td { padding: 2px 0; }
+  #manifest-panel td:nth-child(2), #manifest-panel td:nth-child(3) { text-align: right; padding-left: 8px; }
+  .ok { color: var(--green); } .no { color: var(--red); }
 </style>
 </head>
 <body>
@@ -32,22 +65,31 @@
   <div id="vignette"></div>
   <div class="panel" id="top-left">
     <div><span class="label">GÜN</span> <b id="day">1</b></div>
-    <div><span class="label">GÜNÜN KURALI:</span> <span id="rule">İsyan riski — METAL YASAK</span></div>
+    <div><span class="label">GÜNÜN KURALI:</span> <span id="rule">Silah, mühimmat, kesici alet ve gizli mesaj YASAK</span></div>
   </div>
   <div class="panel" id="top-right">
-    <div><span class="label">İŞLENEN</span> <b id="quota">0 / 5</b></div>
-    <div><span class="label">RÖNTGEN</span> <b id="xray">3</b></div>
+    <div><span class="label">DOĞRU KARAR</span> <b id="quota">0 / 5</b></div>
+    <div><span class="label">İHLAL</span> <b id="violations">0</b></div>
     <div><span class="label">JENERATÖR</span></div>
     <div id="light-bar"><div id="light-fill"></div></div>
   </div>
+  <div class="panel" id="manifest-panel" hidden></div>
+  <div id="toast"></div>
   <div id="hint"></div>
+  <div id="tools">
+    <button data-tool="hand"><kbd>Esc</kbd>El</button>
+    <button data-tool="knife"><kbd>1</kbd>Neşter</button>
+    <button data-tool="uv"><kbd>2</kbd>UV Fener</button>
+  </div>
 </div>
+<div id="overlay" hidden></div>
 
 <script type="importmap">
 { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }
 </script>
 <script type="module">
 import * as THREE from 'three';
+
 
 // ---------- Renderer / Sahne ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -213,6 +255,7 @@ const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 12), new THREE.Me
 bulb.position.copy(lamp.position).add(new THREE.Vector3(0.02, -0.04, -0.02));
 scene.add(lampBase, lampArm, lampHead, bulb);
 
+
 // ---------- Paket türleri ----------
 // Her paket: gövde + userData.lid (açılınca kalkan parça) + userData.inside (açılınca görünen karanlık iç)
 function shadowAll(g) { g.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } }); return g; }
@@ -304,75 +347,284 @@ function makeGift() {
   return shadowAll(g);
 }
 
-// ---------- Paketten çıkan eşyalar ----------
-// Her eşya alt-merkez orijinli; w = masada kapladığı genişlik
-const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...extra });
-const ITEMS = {
-  bread: { name: 'Ekmek', w: 0.16, make() {
-    const m = new THREE.Mesh(new THREE.SphereGeometry(0.5, 20, 12), std(0xb07a3c));
-    m.scale.set(0.15, 0.07, 0.08); m.position.y = 0.035; return m; } },
-  book: { name: 'Kitap', w: 0.11, make(i = 0) {
-    const g = new THREE.Group();
-    const cover = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.03, 0.14), std([0x3b4a6b, 0x6b3b3b, 0x3b5a3b][i % 3]));
-    const pages = new THREE.Mesh(new THREE.BoxGeometry(0.095, 0.024, 0.132), std(0xe0d8c0));
-    cover.position.y = 0.015; pages.position.set(0.004, 0.015, 0);
-    g.add(cover, pages); return g; } },
-  sock: { name: 'Yün çorap', w: 0.08, make() {
-    const g = new THREE.Group();
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.12), std(0x6b6e5a, { roughness: 1 }));
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.02, 0.07), leg.material);
-    leg.position.set(0, 0.01, -0.02); foot.position.set(0.02, 0.01, 0.06); foot.rotation.y = 0.8;
-    g.add(leg, foot); return g; } },
-  sweater: { name: 'Kazak', w: 0.2, make() {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.04, 0.15), std(0x5b3a3a, { roughness: 1 }));
-    m.position.y = 0.02; return m; } },
-  can: { name: 'Konserve', w: 0.08, make() {
-    const g = new THREE.Group();
-    const tin = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.09, 16), std(0xa0a6a6, { metalness: 0.8, roughness: 0.35 }));
-    const label = new THREE.Mesh(new THREE.CylinderGeometry(0.0355, 0.0355, 0.05, 16, 1, true), std(0x8a2e24));
-    tin.position.y = label.position.y = 0.045;
-    g.add(tin, label); return g; } },
-  soap: { name: 'Sabun', w: 0.08, make() {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.03, 0.05), std(0xd8d2b0, { roughness: 0.5 }));
-    m.position.y = 0.015; return m; } },
-  cake: { name: 'Pasta', w: 0.19, make() {
-    const g = new THREE.Group();
-    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 24), std(0x7a4426));
-    const icing = new THREE.Mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.015, 24), std(0xefe6d6, { roughness: 0.5 }));
-    base.position.y = 0.03; icing.position.y = 0.065;
-    g.add(base, icing); return g; } },
-  bear: { name: 'Oyuncak ayı', w: 0.1, make() {
-    const g = new THREE.Group();
-    const fur = std(0x7a5634, { roughness: 1 });
-    const body = new THREE.Mesh(new THREE.SphereGeometry(0.045, 14, 10), fur); body.position.y = 0.045;
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.033, 14, 10), fur); head.position.y = 0.11;
-    const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), fur); e1.position.set(-0.025, 0.14, 0);
-    const e2 = e1.clone(); e2.position.x = 0.025;
-    g.add(body, head, e1, e2); return g; } },
-  letter: { name: 'Mektup', w: 0.13, make() {
-    const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.004, 0.08), std(0xe8e0c8, { roughness: 1 }));
-    m.position.y = 0.002; m.rotation.y = 0.15; return m; } },
+
+// ---------- Ses (WebAudio ile sentezlenir, dosya gerekmez) ----------
+let actx = null;
+function audio() {
+  if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch { return null; } }
+  if (actx.state === 'suspended') actx.resume();
+  return actx;
+}
+function tone(freq, dur, { type = 'sine', gain = 0.15, slide = 0 } = {}) {
+  const a = audio(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type;
+  o.frequency.setValueAtTime(freq, a.currentTime);
+  if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(20, freq + slide), a.currentTime + dur);
+  g.gain.setValueAtTime(gain, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + dur);
+  o.connect(g).connect(a.destination);
+  o.start(); o.stop(a.currentTime + dur);
+}
+function noise(dur, { freq = 2000, q = 1, gain = 0.2 } = {}) {
+  const a = audio(); if (!a) return;
+  const len = Math.floor(a.sampleRate * dur);
+  const buf = a.createBuffer(1, len, a.sampleRate);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+  const src = a.createBufferSource(); src.buffer = buf;
+  const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+  const g = a.createGain(); g.gain.value = gain;
+  src.connect(f).connect(g).connect(a.destination);
+  src.start();
+}
+const SFX = {
+  cut: () => { noise(0.22, { freq: 3800, q: 2, gain: 0.3 }); setTimeout(() => noise(0.18, { freq: 1600, q: 3, gain: 0.2 }), 110); },
+  lid: () => { noise(0.3, { freq: 420, q: 0.8, gain: 0.35 }); tone(150, 0.15, { type: 'triangle', gain: 0.1, slide: -60 }); },
+  pop: () => tone(700, 0.08, { type: 'square', gain: 0.05, slide: 500 }),
+  beep: () => tone(1800, 0.08, { type: 'square', gain: 0.04 }),
+  lever: () => { noise(0.12, { freq: 300, gain: 0.4 }); tone(90, 0.22, { gain: 0.25, slide: -40 }); },
+  clang: () => { noise(0.4, { freq: 900, q: 4, gain: 0.3 }); tone(220, 0.4, { type: 'triangle', gain: 0.08, slide: -80 }); },
+  buzz: () => tone(110, 0.55, { type: 'sawtooth', gain: 0.1 }),
+  good: () => { tone(660, 0.1, { gain: 0.08 }); setTimeout(() => tone(880, 0.16, { gain: 0.08 }), 100); },
+  aha: () => { tone(520, 0.12, { type: 'triangle', gain: 0.12 }); setTimeout(() => tone(780, 0.28, { type: 'triangle', gain: 0.12 }), 110); },
+  uv: () => tone(55, 0.35, { type: 'sawtooth', gain: 0.05 }),
 };
 
-// Her paketin kendi manifestosu ve gerçek içeriği var
-const SHIPMENTS = [
-  { make: makeCrate, name: 'Mühürlü tahta kutu', no: '7741-B', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
-    items: ['Ekmek ........ 1 adet', 'Kitap ........ 2 adet', 'Yün çorap .... 1 çift'], kg: '1.20',
-    contents: ['bread', 'book', 'book', 'sock'] },
-  { make: makeSack, name: 'Dikişli çuval', no: '7742-A', to: 'Mahkûm #0418', from: 'M. Dragan (Anne)',
-    items: ['Kazak ........ 1 adet', 'Konserve ..... 3 adet', 'Sabun ........ 2 adet'], kg: '2.40',
-    contents: ['sweater', 'can', 'can', 'can', 'soap', 'soap'] },
-  { make: makeGift, name: 'Hediye paketi', no: '7743-C', to: 'Mahkûm #1107', from: 'L. Petrov (Kızı)',
-    items: ['Pasta ........ 1 adet', 'Oyuncak ayı .. 1 adet', 'Mektup ....... 1 adet'], kg: '1.00',
-    contents: ['cake', 'bear', 'letter'] },
-];
-let shipmentIndex = 0;
+// ---------- Basit animasyon (tween) sistemi ----------
+const tweens = [];
+const ease = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+// obj'yi (kendi ebeveyn uzayında) hedefe taşır; arc > 0 ise kavis çizerek gider
+function tween(obj, to, { dur = 0.6, arc = 0, rotY, delay = 0, done } = {}) {
+  tweens.push({ obj, from: null, to: to.clone(), dur, arc, rotY, delay, done, t: 0 });
+}
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const w = tweens[i];
+    if (w.delay > 0) { w.delay -= dt; continue; }
+    if (!w.from) { w.from = w.obj.position.clone(); w.fromRot = w.obj.rotation.y; w.obj.visible = true; }
+    w.t += dt;
+    const k = Math.min(1, w.t / w.dur), e = ease(k);
+    w.obj.position.lerpVectors(w.from, w.to, e);
+    w.obj.position.y += Math.sin(Math.PI * k) * w.arc;
+    if (w.rotY !== undefined) w.obj.rotation.y = w.fromRot + (w.rotY - w.fromRot) * e;
+    if (k >= 1) { tweens.splice(i, 1); w.done && w.done(); }
+  }
+}
 
-// ---------- Manifesto (masada, aktif paketin belgesi) ----------
+// ---------- Kaçak nesneler ----------
+const std = (color, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.8, ...extra });
+const CONTRABAND = {
+  magazine: { name: 'Tabanca şarjörü', make() {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.075, 0.045), std(0x1a1a1a, { metalness: 0.7, roughness: 0.4 }));
+    body.rotation.z = 0.12;
+    const tip = new THREE.Mesh(new THREE.CylinderGeometry(0.005, 0.005, 0.012, 8), std(0xc9a040, { metalness: 0.9, roughness: 0.3 }));
+    tip.position.set(0.004, 0.042, 0.01);
+    g.add(body, tip);
+    return g; } },
+  razors: { name: 'Jilet (3 adet)', make() {
+    const g = new THREE.Group();
+    const m = std(0xdfe4e6, { metalness: 1, roughness: 0.2 });
+    for (let i = 0; i < 3; i++) {
+      const b = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.003, 0.02), m);
+      b.position.set((i - 1) * 0.006, i * 0.006, (i - 1) * 0.008);
+      b.rotation.y = (i - 1) * 0.5;
+      g.add(b);
+    }
+    return g; } },
+  bullets: { name: 'Tabanca mermisi (6 adet)', make() {
+    const g = new THREE.Group();
+    const brass = std(0xc9a040, { metalness: 0.9, roughness: 0.3 });
+    const lead = std(0x777777, { metalness: 0.6, roughness: 0.4 });
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 5) * Math.PI * 2, r = i ? 0.017 : 0;
+      const c = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.022, 8), brass);
+      const h = new THREE.Mesh(new THREE.SphereGeometry(0.0045, 8, 6, 0, Math.PI * 2, 0, Math.PI / 2), lead);
+      c.position.set(Math.cos(a) * r, 0, Math.sin(a) * r);
+      h.position.set(c.position.x, 0.011, c.position.z);
+      g.add(c, h);
+    }
+    return g; } },
+};
+
+// UV mürekkebi: normalde görünmez, UV fener yaklaşınca parlar
+function makeUvMark(lines, w, h) {
+  const c = document.createElement('canvas');
+  c.width = 320; c.height = 200;
+  const x = c.getContext('2d');
+  x.textAlign = 'center';
+  x.shadowColor = '#b8ff5a'; x.shadowBlur = 16;
+  x.fillStyle = '#dcff8e';
+  x.font = 'bold 44px Courier New';
+  lines.forEach((l, i) => x.fillText(l, 160, 80 + i * 60));
+  x.strokeStyle = '#dcff8e'; x.lineWidth = 4;
+  x.strokeRect(14, 14, 292, 172);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
+    map: t, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }));
+}
+
+// ---------- İncelenebilir eşyalar ----------
+// make(data) → model; cut(model, hidden) → { halves: [{h, s}], spread, hiddenY }
+const halfCyl = (r, h, s, mat) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28, 1, false, s > 0 ? 0 : Math.PI, Math.PI), mat);
+const cutFace = (w, h, s, mat) => { const f = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); f.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; return f; };
+
+const ITEMS = {
+  cake: { name: 'Doğum günü pastası', w: 0.2, uv: { pos: [0, 0.0755, 0.02], rotX: -Math.PI / 2, w: 0.1, h: 0.062 },
+    make() {
+      const g = new THREE.Group();
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 28), std(0x7a4426));
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.015, 28), std(0xefe6d6, { roughness: 0.5 }));
+      const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.035, 8), std(0xd94f5c));
+      base.position.y = 0.03; top.position.y = 0.0675; candle.position.set(0.03, 0.092, -0.03);
+      g.add(base, top, candle);
+      g.userData.whole = [base, top, candle];
+      return g;
+    },
+    cut(g) {
+      g.userData.whole.forEach(m => { m.visible = false; });
+      const sponge = std(0x7a4426), icing = std(0xefe6d6, { roughness: 0.5, side: THREE.DoubleSide });
+      const crumb = std(0xc9965a, { roughness: 1, side: THREE.DoubleSide });
+      const halves = [];
+      for (const s of [1, -1]) {
+        const h = new THREE.Group();
+        const b = halfCyl(0.09, 0.06, s, sponge); b.position.y = 0.03;
+        const t = halfCyl(0.092, 0.015, s, icing); t.position.y = 0.0675;
+        const f = cutFace(0.18, 0.06, s, crumb); f.position.y = 0.03;
+        const fi = cutFace(0.184, 0.015, s, icing); fi.position.y = 0.0675;
+        h.add(b, t, f, fi);
+        g.add(h);
+        halves.push({ h, s });
+      }
+      return { halves, spread: 0.035, hiddenY: 0.03 };
+    } },
+
+  can: { name: 'Konserve', w: 0.09, uv: { pos: [0, 0.045, 0.037], rotX: 0, w: 0.06, h: 0.038 },
+    make() {
+      const g = new THREE.Group();
+      const metal = std(0xa0a6a6, { metalness: 0.8, roughness: 0.35, side: THREE.DoubleSide });
+      const tin = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.09, 20, 1, true), metal);
+      const bottom = new THREE.Mesh(new THREE.CircleGeometry(0.035, 20), metal);
+      const label = new THREE.Mesh(new THREE.CylinderGeometry(0.0355, 0.0355, 0.05, 20, 1, true), std(0x8a2e24));
+      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.004, 20), metal);
+      tin.position.y = label.position.y = 0.045;
+      bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.001;
+      lid.position.y = 0.09;
+      g.add(tin, bottom, label, lid);
+      g.userData.lid = lid;
+      return g;
+    },
+    cut(g, hidden) {
+      const lid = g.userData.lid;
+      tween(lid, new THREE.Vector3(0.055, 0.004, 0.02), { dur: 0.45, arc: 0.07 });
+      // İçerik: normalde fasulye suyu; zula varsa seviye düşük ve koyu
+      const fill = new THREE.Mesh(new THREE.CircleGeometry(0.034, 20), std(hidden ? 0x2e2418 : 0x7a4a22, { roughness: 0.25 }));
+      fill.rotation.x = -Math.PI / 2;
+      fill.position.y = hidden ? 0.055 : 0.08;
+      g.add(fill);
+      return { halves: [], spread: 0, hiddenY: 0.07 };
+    } },
+
+  bear: { name: 'Peluş ayı', w: 0.11, uv: { pos: [0, 0.047, 0.046], rotX: -0.35, w: 0.07, h: 0.044 },
+    make(data) {
+      const g = new THREE.Group();
+      const fur = std(0x7a5634, { roughness: 1 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), fur);
+      body.position.y = 0.045;
+      const upper = new THREE.Group();
+      const head = new THREE.Mesh(new THREE.SphereGeometry(0.033, 14, 10), fur); head.position.y = 0.11;
+      const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), fur); e1.position.set(-0.025, 0.14, 0);
+      const e2 = e1.clone(); e2.position.x = 0.025;
+      const snout = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), std(0xb08a60, { roughness: 1 })); snout.position.set(0, 0.105, 0.03);
+      upper.add(head, e1, e2, snout);
+      g.add(body, upper);
+      // İpucu: göbekte sonradan dikilmiş kaba dikiş
+      if (data && data.seam) {
+        const thread = std(0x1e140a);
+        const line = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.045, 0.003), thread);
+        line.position.set(0, 0.045, 0.045);
+        g.add(line);
+        for (let i = -2; i <= 2; i++) {
+          const st = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.002, 0.003), thread);
+          st.position.set(0, 0.045 + i * 0.009, 0.0452);
+          g.add(st);
+          g.userData.whole = (g.userData.whole || []).concat(st);
+        }
+        g.userData.whole = (g.userData.whole || []).concat(line);
+      }
+      g.userData.whole = (g.userData.whole || []).concat(body);
+      g.userData.upper = upper;
+      return g;
+    },
+    cut(g) {
+      g.userData.whole.forEach(m => { m.visible = false; });
+      const fur = std(0x7a5634, { roughness: 1, side: THREE.DoubleSide });
+      const stuffing = std(0xeeeae0, { roughness: 1, side: THREE.DoubleSide });
+      const halves = [];
+      for (const s of [1, -1]) {
+        const h = new THREE.Group();
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12, s > 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), fur);
+        b.position.y = 0.045;
+        const f = new THREE.Mesh(new THREE.CircleGeometry(0.044, 16), stuffing);
+        f.position.y = 0.045; f.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2;
+        h.add(b, f);
+        if (s > 0) { g.remove(g.userData.upper); h.add(g.userData.upper); }
+        g.add(h);
+        halves.push({ h, s });
+      }
+      // Dışarı taşan pamuk
+      for (let i = 0; i < 4; i++) {
+        const p = new THREE.Mesh(new THREE.SphereGeometry(0.01 + Math.random() * 0.006, 8, 6), stuffing);
+        p.position.set((Math.random() - 0.5) * 0.02, 0.03 + i * 0.01, (Math.random() - 0.5) * 0.04);
+        g.add(p);
+      }
+      return { halves, spread: 0.032, hiddenY: 0.05 };
+    } },
+};
+
+// ---------- Günün sevkiyatları ----------
+// declared: manifestoda yazan ağırlık (g) · real: terazide çıkan · hidden: içindeki kaçak · uv: UV mürekkebiyle yazılmış mesaj
+const SHIPMENTS = [
+  { make: makeGift, name: 'Hediye paketi', no: '7741-B', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
+    contents: [{ key: 'cake', declared: 1000, real: 1320, hidden: 'magazine' }],
+    illegal: 'Pastanın içinde tabanca şarjörü vardı.' },
+  { make: makeCrate, name: 'Mühürlü tahta kutu', no: '7742-A', to: 'Mahkûm #0418', from: 'M. Dragan (Anne)',
+    contents: [{ key: 'can', declared: 400, real: 403 }, { key: 'can', declared: 400, real: 398 }],
+    illegal: null },
+  { make: makeSack, name: 'Dikişli çuval', no: '7743-C', to: 'Mahkûm #1107', from: 'L. Petrov (Kızı)',
+    contents: [{ key: 'bear', declared: 250, real: 318, hidden: 'razors', seam: true }],
+    illegal: 'Ayının içine jilet dikilmişti.' },
+  { make: makeSack, name: 'Dikişli çuval', no: '7744-A', to: 'Mahkûm #0733', from: 'I. Kovacs (Kardeş)',
+    contents: [{ key: 'bear', declared: 250, real: 247 }, { key: 'can', declared: 400, real: 404 }],
+    illegal: null },
+  { make: makeCrate, name: 'Mühürlü tahta kutu', no: '7745-D', to: 'Mahkûm #2291', from: 'E. Varga (Eş)',
+    contents: [{ key: 'can', declared: 400, real: 401 }, { key: 'can', declared: 400, real: 562, hidden: 'bullets' }],
+    illegal: 'Konservelerden birinde mermi vardı.' },
+  { make: makeGift, name: 'Hediye paketi', no: '7746-B', to: 'Mahkûm #0418', from: 'A. Dragan (Eşi)',
+    contents: [{ key: 'cake', declared: 900, real: 904 }, { key: 'bear', declared: 250, real: 252, uv: ['KAÇIŞ', 'ÇAMAŞIRHANE 03:00'] }],
+    illegal: 'Ayının üzerinde UV mürekkeple yazılmış firar mesajı vardı.' },
+];
+const QUOTA = 5;
+
+// ---------- Manifesto ----------
+function manifestLines(s) {
+  const map = new Map();
+  for (const c of s.contents) {
+    const k = c.key + ':' + c.declared;
+    if (!map.has(k)) map.set(k, { name: ITEMS[c.key].name, count: 0, g: c.declared });
+    map.get(k).count++;
+  }
+  return [...map.values()];
+}
+const totalDeclared = s => s.contents.reduce((a, c) => a + c.declared, 0);
+
 const manifestCanvas = document.createElement('canvas');
 manifestCanvas.width = 512; manifestCanvas.height = 700;
 const manifestTex = new THREE.CanvasTexture(manifestCanvas);
 manifestTex.colorSpace = THREE.SRGBColorSpace;
+const manifestPanel = document.getElementById('manifest-panel');
 
 function drawManifest(s) {
   const x = manifestCanvas.getContext('2d');
@@ -381,6 +633,7 @@ function drawManifest(s) {
   if (!s) {
     x.font = 'italic 24px Courier New';
     x.fillText('— Paket bekleniyor —', 110, 350);
+    manifestPanel.hidden = true;
   } else {
     x.font = 'bold 34px Courier New'; x.fillText('GÖNDERİ MANİFESTOSU', 40, 70);
     x.font = '22px Courier New';
@@ -389,9 +642,19 @@ function drawManifest(s) {
     x.fillText('Gönderen: ' + s.from, 40, 190);
     x.fillRect(40, 215, 432, 2);
     x.fillText('İÇERİK:', 40, 260);
-    s.items.forEach((it, i) => x.fillText('- ' + it, 40, 300 + i * 35));
+    manifestLines(s).forEach((l, i) => x.fillText(`- ${l.name} ×${l.count} · ${l.g} g`, 40, 300 + i * 35));
     x.fillRect(40, 410, 432, 2);
-    x.fillText('Toplam ağırlık: ' + s.kg + ' kg', 40, 455);
+    x.fillText('Toplam: ' + totalDeclared(s) + ' g', 40, 455);
+
+    // Okunabilir kopya (HUD)
+    manifestPanel.innerHTML = `
+      <div class="m-title">GÖNDERİ MANİFESTOSU</div>
+      <div><span class="label">No</span> ${s.no}</div>
+      <div><span class="label">Alıcı</span> ${s.to}</div>
+      <div><span class="label">Gönderen</span> ${s.from}</div>
+      <table>${manifestLines(s).map(l => `<tr><td>${l.name}</td><td>×${l.count}</td><td>${l.g} g</td></tr>`).join('')}</table>
+      <div class="m-total"><span class="label">Toplam</span> ${totalDeclared(s)} g</div>`;
+    manifestPanel.hidden = false;
   }
   x.font = 'italic 18px Courier New';
   x.fillText('Devlet Ceza İnfaz Kurumu — Form 12', 40, 660);
@@ -405,71 +668,174 @@ const manifest = new THREE.Mesh(
 );
 manifest.rotation.x = -Math.PI / 2;
 manifest.rotation.z = 0.08;
-manifest.position.set(-0.45, DESK_TOP + 0.001, 0.0);
+manifest.position.set(-0.52, DESK_TOP + 0.001, 0.0);
 manifest.receiveShadow = true;
 scene.add(manifest);
 
-// ---------- Damgalar ----------
-function makeStamp(color, x) {
+// ---------- Hassas terazi ----------
+const SCALE_POS = new THREE.Vector3(0.5, DESK_TOP, 0.12);
+const SCALE_TOP = DESK_TOP + 0.047;
+const scaleCanvas = document.createElement('canvas');
+scaleCanvas.width = 256; scaleCanvas.height = 80;
+const scaleTex = new THREE.CanvasTexture(scaleCanvas);
+scaleTex.colorSpace = THREE.SRGBColorSpace;
+function drawScale(grams) {
+  const x = scaleCanvas.getContext('2d');
+  x.fillStyle = '#0c140c'; x.fillRect(0, 0, 256, 80);
+  x.fillStyle = '#86ff7e';
+  x.shadowColor = '#86ff7e'; x.shadowBlur = 8;
+  x.font = 'bold 50px Courier New';
+  x.textAlign = 'right';
+  x.fillText(String(Math.round(grams)), 196, 58);
+  x.font = 'bold 26px Courier New';
+  x.fillText('g', 236, 58);
+  x.shadowBlur = 0;
+  scaleTex.needsUpdate = true;
+}
+drawScale(0);
+const scaleGroup = new THREE.Group();
+{
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.04, 0.17), std(0x3a403a, { metalness: 0.5, roughness: 0.5 }));
+  body.position.y = 0.02;
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.006, 0.14), std(0xb8bcb8, { metalness: 0.9, roughness: 0.3 }));
+  plate.position.y = 0.043;
+  const display = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.0375), new THREE.MeshBasicMaterial({ map: scaleTex }));
+  display.position.set(0, 0.02, 0.0855);
+  scaleGroup.add(body, plate, display);
+  shadowAll(scaleGroup);
+  scaleGroup.position.copy(SCALE_POS);
+  scene.add(scaleGroup);
+}
+let scaleItem = null;
+let scaleReading = 0, scaleTarget = 0;
+
+// ---------- Delil tepsisi ----------
+const TRAY_POS = new THREE.Vector3(0.5, DESK_TOP, -0.17);
+const tray = new THREE.Group();
+{
+  const m = std(0x2b2f2b, { metalness: 0.6, roughness: 0.5 });
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.006, 0.13), m);
+  base.position.y = 0.003;
+  tray.add(base);
+  for (const [w, d, x, z] of [[0.18, 0.006, 0, 0.062], [0.18, 0.006, 0, -0.062], [0.006, 0.13, 0.087, 0], [0.006, 0.13, -0.087, 0]]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(w, 0.02, d), m);
+    r.position.set(x, 0.01, z);
+    tray.add(r);
+  }
+  shadowAll(tray);
+  tray.position.copy(TRAY_POS);
+  scene.add(tray);
+}
+let trayCount = 0;
+
+// ---------- Karar kolları ----------
+function makeLever(color, x) {
   const g = new THREE.Group();
-  const base = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.03, 0.06), new THREE.MeshStandardMaterial({ color, roughness: 0.6 }));
-  base.position.y = 0.015;
-  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.02, 0.07, 12), new THREE.MeshStandardMaterial({ color: 0x1b1712, roughness: 0.7 }));
-  handle.position.y = 0.065;
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.025, 12, 12), handle.material);
-  knob.position.y = 0.11;
-  g.add(base, handle, knob);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.04, 0.1), frameMat);
+  base.position.y = 0.02;
+  const pivot = new THREE.Group();
+  pivot.position.y = 0.04;
+  const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.007, 0.007, 0.16, 8), std(0x9a9a9a, { metalness: 0.9, roughness: 0.3 }));
+  stick.position.y = 0.08;
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 14, 10), std(color, { roughness: 0.4 }));
+  knob.position.y = 0.16;
+  pivot.add(stick, knob);
+  pivot.rotation.x = -0.35;
+  g.add(base, pivot);
   shadowAll(g);
-  // Görünmez, daha geniş tıklama alanı
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.16, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
-  hit.position.y = 0.07;
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.24, 0.14), new THREE.MeshBasicMaterial({ visible: false }));
+  hit.position.y = 0.11;
   g.add(hit);
-  g.position.set(x, DESK_TOP, -0.02);
-  g.userData.baseY = DESK_TOP;
+  g.position.set(x, DESK_TOP, -0.12);
+  g.userData.pivot = pivot;
   return g;
 }
-const stampApprove = makeStamp(0x2f6a2c, 0.64);
-const stampSeize = makeStamp(0x8a1d18, 0.8);
-scene.add(stampApprove, stampSeize);
+const leverApprove = makeLever(0x2f7a2c, 0.72);
+const leverSeize = makeLever(0x9a1d18, 0.87);
+scene.add(leverApprove, leverSeize);
+const leverAnims = [];
 
-
-// ---------- Basit animasyon (tween) sistemi ----------
-const tweens = [];
-const ease = k => k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-// obj'yi (kendi ebeveyn uzayında) hedefe taşır; arc > 0 ise kavis çizerek gider
-function tween(obj, to, { dur = 0.6, arc = 0, rotY, delay = 0, done } = {}) {
-  tweens.push({ obj, from: null, to: to.clone(), dur, arc, rotY, delay, done, t: 0 });
+// ---------- El koyma çukuru ----------
+const BIN_POS = new THREE.Vector3(1.36, 0, -0.22);
+{
+  const bin = new THREE.Group();
+  const m = std(0x2a2d2a, { metalness: 0.6, roughness: 0.6 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.7, 0.46), m);
+  body.position.y = 0.35;
+  const hole = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.38), new THREE.MeshBasicMaterial({ color: 0x030303 }));
+  hole.rotation.x = -Math.PI / 2;
+  hole.position.y = 0.701;
+  // Sarı-siyah uyarı şeridi
+  const c = document.createElement('canvas'); c.width = 128; c.height = 16;
+  const x = c.getContext('2d');
+  x.fillStyle = '#111'; x.fillRect(0, 0, 128, 16);
+  x.fillStyle = '#d9a520';
+  for (let i = -16; i < 128; i += 16) { x.beginPath(); x.moveTo(i, 16); x.lineTo(i + 8, 0); x.lineTo(i + 16, 0); x.lineTo(i + 8, 16); x.fill(); }
+  const stripeTex = new THREE.CanvasTexture(c);
+  stripeTex.colorSpace = THREE.SRGBColorSpace;
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.47, 0.05, 0.47), new THREE.MeshStandardMaterial({ map: stripeTex, roughness: 0.7 }));
+  stripe.position.y = 0.675;
+  bin.add(body, stripe, hole);
+  shadowAll(bin);
+  bin.position.copy(BIN_POS);
+  scene.add(bin);
 }
-function updateTweens(dt) {
-  for (let i = tweens.length - 1; i >= 0; i--) {
-    const w = tweens[i];
-    if (w.delay > 0) { w.delay -= dt; continue; }
-    if (!w.from) { w.from = w.obj.position.clone(); w.fromRot = w.obj.rotation.y; }
-    w.t += dt;
-    const k = Math.min(1, w.t / w.dur), e = ease(k);
-    w.obj.position.lerpVectors(w.from, w.to, e);
-    w.obj.position.y += Math.sin(Math.PI * k) * w.arc;
-    if (w.rotY !== undefined) w.obj.rotation.y = w.fromRot + (w.rotY - w.fromRot) * e;
-    if (k >= 1) { tweens.splice(i, 1); w.done && w.done(); }
-  }
+
+// ---------- UV fener ----------
+const uvLight = new THREE.SpotLight(0x8f5bff, 0, 2.5, 0.2, 0.55, 1);
+scene.add(uvLight, uvLight.target);
+const deskPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(DESK_TOP + 0.05));
+const cursorPoint = new THREE.Vector3(0, DESK_TOP, 0);
+
+// ---------- Alet seçimi ----------
+let tool = 'hand';
+const toolButtons = document.querySelectorAll('#tools button');
+function setTool(t) {
+  if (t === tool) t = 'hand';
+  tool = t;
+  toolButtons.forEach(b => b.classList.toggle('active', b.dataset.tool === tool));
+  document.body.classList.toggle('uv', tool === 'uv');
+  if (tool === 'uv') SFX.uv();
+}
+setTool('hand');
+toolButtons.forEach(b => b.addEventListener('click', e => { e.stopPropagation(); setTool(b.dataset.tool); b.blur(); }));
+addEventListener('keydown', e => {
+  if (e.key === '1') setTool('knife');
+  else if (e.key === '2') setTool('uv');
+  else if (e.key === 'Escape') { tool = 'uv'; setTool('hand'); }
+});
+renderer.domElement.addEventListener('contextmenu', e => { e.preventDefault(); tool = 'x'; setTool('hand'); });
+
+// ---------- Bildirim ----------
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function toast(text, kind = '') {
+  toastEl.textContent = text;
+  toastEl.className = 'show ' + kind;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toastEl.className = kind; }, 2600);
 }
 
 // ---------- Paket akışı ----------
 // incoming (bantta gelir) → belt (önümüzde bekler) → toDesk → desk (kapalı) → opening → open
-// → karar → returning (eşyalar kutuya, kutu banda) → outgoing (sola gider)
-const DESK_SPOT = new THREE.Vector3(0.12, DESK_TOP, -0.16);
-const ITEM_ROW_Z = 0.16;
-const ITEM_ROW_START = -0.3;
+// → karar → returning (eşyalar kutuya; onay: banda / el koy: çukura)
+const DESK_SPOT = new THREE.Vector3(0.1, DESK_TOP, -0.16);
+const ITEM_ROW_Z = 0.15;
+const ITEM_ROW_START = -0.32;
 
 let current = null;
 let outgoing = [];
-let processed = 0;
-const QUOTA = 5;
+let shipmentIndex = 0;
+let processed = 0, correctCount = 0, violations = 0;
+const results = [];
+let dayOver = false;
 const quotaEl = document.getElementById('quota');
+const violationsEl = document.getElementById('violations');
 
 function spawnNext() {
-  const s = SHIPMENTS[shipmentIndex % SHIPMENTS.length];
-  shipmentIndex++;
+  if (dayOver) return;
+  if (shipmentIndex >= SHIPMENTS.length) { endDay('done'); return; }
+  const s = SHIPMENTS[shipmentIndex++];
   const mesh = s.make();
   mesh.position.set(SPAWN_X, BELT_Y, BELT_Z);
   mesh.rotation.y = (Math.random() - 0.5) * 0.3;
@@ -479,67 +845,163 @@ function spawnNext() {
 
 function bringToDesk() {
   current.state = 'toDesk';
+  SFX.pop();
   tween(current.mesh, DESK_SPOT, { dur: 0.8, arc: 0.18, rotY: 0, done: () => { current.state = 'desk'; } });
 }
 
 function openPackage() {
   const c = current;
   c.state = 'opening';
+  SFX.lid();
   const lid = c.mesh.userData.lid;
-  // Kapak kalkar, arkaya doğru uzaklaşır ve kaybolur
-  tween(lid, lid.position.clone().add(new THREE.Vector3(-0.1, 0.35, -0.3)), {
-    dur: 0.6, done: () => { lid.visible = false; } });
-  // Eşyalar tek tek kutudan çıkıp masanın önüne dizilir
+  tween(lid, lid.position.clone().add(new THREE.Vector3(-0.1, 0.35, -0.3)), { dur: 0.6, done: () => { lid.visible = false; } });
   const top = DESK_SPOT.clone(); top.y += c.mesh.userData.top;
   let x = ITEM_ROW_START;
-  let bookCount = 0;
-  c.s.contents.forEach((key, i) => {
-    const def = ITEMS[key];
-    const mesh = def.make(key === 'book' ? bookCount++ : 0);
-    shadowAll(mesh);
+  c.s.contents.forEach((data, i) => {
+    const def = ITEMS[data.key];
+    const model = def.make(data);
+    let uvMark = null;
+    if (data.uv) {
+      uvMark = makeUvMark(data.uv, def.uv.w, def.uv.h);
+      uvMark.position.set(...def.uv.pos);
+      uvMark.rotation.x = def.uv.rotX;
+      model.add(uvMark);
+    }
+    shadowAll(model);
     const obj = new THREE.Group();
-    obj.add(mesh);
+    obj.add(model);
     obj.position.copy(top);
     obj.visible = false;
     scene.add(obj);
     const slot = new THREE.Vector3(x + def.w / 2, DESK_TOP, ITEM_ROW_Z);
-    x += def.w + 0.02;
-    c.items.push({ obj, name: def.name });
-    tween(obj, slot, { dur: 0.55, arc: 0.12, delay: 0.35 + i * 0.18,
-      done: () => { if (i === c.s.contents.length - 1) c.state = 'open'; } });
-    // Tween başlarken görünür olsun
-    setTimeout(() => { obj.visible = true; }, (0.35 + i * 0.18) * 1000);
+    x += def.w + 0.03;
+    const it = { obj, model, def, data, slot, name: def.name, uvMark, onScale: false, cut: false, extracted: false };
+    c.items.push(it);
+    tween(obj, slot, { dur: 0.55, arc: 0.12, delay: 0.35 + i * 0.2,
+      done: () => { SFX.pop(); if (i === c.s.contents.length - 1) c.state = 'open'; } });
   });
+}
+
+const weightOf = it => it.extracted ? it.data.declared + 2 : it.data.real;
+
+function toggleScale(it) {
+  if (it.busy) return;
+  if (it.onScale) {
+    it.busy = true; it.onScale = false; scaleItem = null; scaleTarget = 0;
+    tween(it.obj, it.slot, { dur: 0.45, arc: 0.08, done: () => { it.busy = false; } });
+    return;
+  }
+  if (scaleItem) toggleScale(scaleItem);
+  it.busy = true;
+  scaleItem = it;
+  tween(it.obj, new THREE.Vector3(SCALE_POS.x, SCALE_TOP, SCALE_POS.z), { dur: 0.45, arc: 0.08,
+    done: () => { it.busy = false; it.onScale = true; scaleTarget = weightOf(it); SFX.beep(); } });
+}
+
+function cutItem(it) {
+  if (it.cut || it.busy) return;
+  if (!it.def.cut) { toast('Bu eşya neşterle kesilemez.'); return; }
+  it.cut = true;
+  SFX.cut();
+  const hidden = it.data.hidden;
+  const res = it.def.cut(it.model, !!hidden);
+  shadowAll(it.model);
+  for (const { h, s } of res.halves) tween(h, new THREE.Vector3(s * res.spread, 0, 0), { dur: 0.35 });
+  // UV yazısı kumaşla birlikte bir yarıda kalır
+  if (it.uvMark && res.halves.length) { it.model.remove(it.uvMark); res.halves[0].h.add(it.uvMark); }
+  if (hidden) {
+    const cb = CONTRABAND[hidden];
+    const cbObj = new THREE.Group();
+    cbObj.add(shadowAll(cb.make()));
+    // Küçük nesne: tıklaması kolay olsun diye görünmez geniş alan
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.07), new THREE.MeshBasicMaterial({ visible: false }));
+    cbObj.add(hit);
+    cbObj.position.copy(it.obj.position).add(new THREE.Vector3(0, res.hiddenY, 0));
+    cbObj.visible = false;
+    scene.add(cbObj);
+    tween(cbObj, cbObj.position.clone().add(new THREE.Vector3(0, 0.04, 0)), { dur: 0.4, delay: 0.35,
+      done: () => { SFX.aha(); toast('Bir şey var! ' + cb.name, 'aha'); } });
+    current.items.push({ obj: cbObj, name: cb.name, contraband: true, parent: it, inTray: false });
+  } else {
+    setTimeout(() => toast('İçi temiz görünüyor.'), 400);
+  }
+}
+
+function moveToTray(cb) {
+  if (cb.inTray) return;
+  cb.inTray = true;
+  cb.parent.extracted = true;
+  if (cb.parent.onScale) scaleTarget = weightOf(cb.parent);
+  const target = TRAY_POS.clone().add(new THREE.Vector3(-0.045 + (trayCount++ % 3) * 0.045, 0.008, 0));
+  SFX.pop();
+  tween(cb.obj, target, { dur: 0.5, arc: 0.1 });
+}
+
+function pullLever(lever) {
+  SFX.lever();
+  leverAnims.push({ pivot: lever.userData.pivot, t: 0 });
 }
 
 function decide(verdict) {
   const c = current;
   if (!c || (c.state !== 'desk' && c.state !== 'open')) return;
-  c.verdict = verdict;
   c.state = 'returning';
   current = null;
   processed++;
-  quotaEl.textContent = processed + ' / ' + QUOTA;
+  const illegal = !!c.s.illegal;
+  const correct = (verdict === 'seize') === illegal;
+  if (correct) {
+    correctCount++;
+    toast(verdict === 'seize' ? 'DOĞRU — ' + c.s.illegal : 'DOĞRU — paket temizdi.', 'good');
+    SFX.good();
+  } else {
+    violations++;
+    toast(verdict === 'seize' ? 'İHLAL — paket temizdi. Masum birinin payına el koydun.' : 'İHLAL — ' + c.s.illegal, 'bad');
+    SFX.buzz();
+  }
+  results.push({ s: c.s, verdict, correct });
+  quotaEl.textContent = correctCount + ' / ' + QUOTA;
+  violationsEl.textContent = violations;
   drawManifest(null);
+  scaleItem = null; scaleTarget = 0;
+  trayCount = 0;
 
+  // Her şey (kaçaklar dahil) kutuya geri döner
   const top = DESK_SPOT.clone(); top.y += c.mesh.userData.top;
-  c.items.forEach((it, i) => tween(it.obj, top, { dur: 0.35, arc: 0.08, delay: i * 0.06,
-    done: () => scene.remove(it.obj) }));
+  c.items.forEach((it, i) => tween(it.obj, top, { dur: 0.35, arc: 0.08, delay: i * 0.06, done: () => scene.remove(it.obj) }));
+
+  const next = () => setTimeout(spawnNext, 900);
+  const dispatch = verdict === 'approve'
+    ? () => tween(c.mesh, new THREE.Vector3(INSPECT_X, BELT_Y, BELT_Z), { dur: 0.7, arc: 0.18,
+        done: () => { c.state = 'outgoing'; outgoing.push(c); next(); } })
+    : () => tween(c.mesh, new THREE.Vector3(BIN_POS.x, 0.85, BIN_POS.z), { dur: 0.8, arc: 0.25,
+        done: () => tween(c.mesh, new THREE.Vector3(BIN_POS.x, 0.1, BIN_POS.z), { dur: 0.35,
+          done: () => { SFX.clang(); scene.remove(c.mesh); next(); } }) });
+
   const lid = c.mesh.userData.lid;
-  const back = () => tween(c.mesh, new THREE.Vector3(INSPECT_X, BELT_Y, BELT_Z), { dur: 0.7, arc: 0.18,
-    done: () => { c.state = 'outgoing'; outgoing.push(c); setTimeout(spawnNext, 900); } });
-  // Açıldıysa kapak geri takılır, sonra kutu banda döner
-  if (lid.visible && lid.position.y === lid.userData.homeY) back();
+  if (lid.visible && lid.position.y === lid.userData.homeY) dispatch();
   else {
     lid.visible = true;
-    tween(lid, new THREE.Vector3(0, lid.userData.homeY, 0), { dur: 0.35, delay: c.items.length * 0.06 + 0.3, done: back });
+    tween(lid, new THREE.Vector3(0, lid.userData.homeY, 0), { dur: 0.35, delay: c.items.length * 0.06 + 0.3, done: dispatch });
   }
 }
 
-// Damga basma animasyonu
-const stampAnims = [];
-function pressStamp(stamp) {
-  stampAnims.push({ stamp, t: 0 });
+// ---------- Gün sonu ----------
+function endDay(reason) {
+  if (dayOver) return;
+  dayOver = true;
+  const passed = correctCount >= QUOTA;
+  const overlay = document.getElementById('overlay');
+  overlay.innerHTML = `<div class="card">
+    <h2>${reason === 'dark' ? 'JENERATÖR SUSTU' : 'GÜN 1 SONA ERDİ'}</h2>
+    <div>Doğru karar: <b>${correctCount}</b> / ${SHIPMENTS.length} · İhlal: <b>${violations}</b> · Kota: ${QUOTA}</div>
+    <ul>${results.map(r => `<li class="${r.correct ? 'ok' : 'no'}">${r.s.no} ${r.s.name} — ${r.verdict === 'seize' ? 'EL KOY' : 'ONAY'} ${r.correct ? '✓' : '✗'}${r.s.illegal ? ' · ' + r.s.illegal : ' · temizdi'}</li>`).join('')}</ul>
+    <div class="${passed ? 'ok' : 'no'}">${passed
+      ? 'Kota doldu. Gardiyan seni hücrene götürüyor. Yarın yine bu masadasın.'
+      : 'Kota dolmadı. Yarın sabah adın infaz listesinde.'}</div>
+    <button id="restart">Günü baştan oyna</button></div>`;
+  overlay.hidden = false;
+  document.getElementById('restart').addEventListener('click', () => location.reload());
 }
 
 spawnNext();
@@ -548,62 +1010,84 @@ spawnNext();
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 const hint = document.getElementById('hint');
-addEventListener('mousemove', e => {
+renderer.domElement.addEventListener('mousemove', e => {
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
 });
 
 const PACKAGE_HINT = {
   incoming: 'bantta geliyor',
-  belt: 'masaya almak için tıkla',
+  belt: 'tıkla: masaya al',
   toDesk: '',
-  desk: 'açmak için tıkla',
+  desk: 'tıkla: aç',
   opening: 'açılıyor…',
-  open: 'açıldı · eşyaları manifestoyla karşılaştır',
+  open: 'boş · eşyaları incele',
 };
+const canDecide = () => current && (current.state === 'desk' || current.state === 'open');
+
+function itemHint(it) {
+  if (it.contraband) return it.inTray ? `KAÇAK: ${it.name} (delil tepsisinde)` : `KAÇAK: ${it.name} — tıkla: delil tepsisine koy`;
+  if (tool === 'knife') return it.cut ? `${it.name} — kesildi` : it.def.cut ? `${it.name} — tıkla: neşterle kes` : `${it.name} — kesilemez`;
+  if (tool === 'uv') return it.uvMark && it.uvMark.material.opacity > 0.4 ? `UV: "${it.data.uv.join(' ')}"` : `${it.name} — UV ışığında iz yok`;
+  return it.onScale ? `${it.name} — terazide: ${weightOf(it)} g · tıkla: geri al` : `${it.name} — tıkla: teraziye koy`;
+}
 
 function hoverTarget() {
   raycaster.setFromCamera(mouse, camera);
-  const canStamp = current && (current.state === 'desk' || current.state === 'open');
   const list = [
-    { obj: stampApprove, id: 'approve', text: canStamp ? 'ONAY damgası — tıkla' : 'ONAY damgası · önce paketi masaya al' },
-    { obj: stampSeize, id: 'seize', text: canStamp ? 'EL KOY damgası — tıkla' : 'EL KOY damgası · önce paketi masaya al' },
-    { obj: manifest, id: 'manifest', text: current && current.state !== 'incoming' ? 'Manifesto — ' + current.s.no : 'Manifesto — paket bekleniyor' },
+    { obj: leverApprove, id: 'approve', text: canDecide() ? 'ONAY kolu — paket temiz, banda gönder' : 'ONAY kolu · önce paketi masaya al' },
+    { obj: leverSeize, id: 'seize', text: canDecide() ? 'EL KOY kolu — pakete el koy, çukura at' : 'EL KOY kolu · önce paketi masaya al' },
+    { obj: scaleGroup, id: 'scale', text: scaleItem ? `Terazi — ${Math.round(scaleReading)} g` : 'Terazi — boş · eşyaya tıklayıp üstüne koy' },
+    { obj: tray, id: 'tray', text: 'Delil tepsisi' },
+    { obj: manifest, id: 'manifest', text: canDecide() ? 'Manifesto — okunaklı kopyası solda' : 'Manifesto — paket bekleniyor' },
   ];
   if (current) {
     list.push({ obj: current.mesh, id: 'package', text: current.s.name + ' — ' + PACKAGE_HINT[current.state] });
-    for (const it of current.items) if (it.obj.visible) list.push({ obj: it.obj, id: 'item', text: it.name });
+    for (const it of current.items) if (it.obj.visible) list.push({ obj: it.obj, id: it.contraband ? 'contraband' : 'item', it });
   }
+  // Bulunan kaçak nesne, içinden çıktığı eşyanın önüne geçer
   let best = null, bestD = Infinity;
   for (const h of list) {
     const hit = raycaster.intersectObject(h.obj, true)[0];
-    if (hit && hit.distance < bestD) { best = h; bestD = hit.distance; }
+    if (!hit) continue;
+    const d = h.id === 'contraband' ? hit.distance - 1 : hit.distance;
+    if (d < bestD) { best = h; bestD = d; }
   }
+  if (best && best.it) best.text = itemHint(best.it);
   return best;
 }
 
-addEventListener('click', () => {
+renderer.domElement.addEventListener('click', () => {
+  audio();
+  if (dayOver) return;
   const h = hoverTarget();
-  if (!h || !current) return;
-  if (h.id === 'package') {
+  if (!h) return;
+  if (h.id === 'package' && current) {
     if (current.state === 'belt') bringToDesk();
     else if (current.state === 'desk') openPackage();
+  } else if (h.id === 'item') {
+    if (tool === 'hand') toggleScale(h.it);
+    else if (tool === 'knife') cutItem(h.it);
+  } else if (h.id === 'contraband') {
+    moveToTray(h.it);
   } else if (h.id === 'approve' || h.id === 'seize') {
-    if (current.state !== 'desk' && current.state !== 'open') return;
-    pressStamp(h.id === 'approve' ? stampApprove : stampSeize);
-    setTimeout(() => decide(h.id), 250);
+    if (!canDecide()) return;
+    pullLever(h.id === 'approve' ? leverApprove : leverSeize);
+    setTimeout(() => decide(h.id), 300);
   }
 });
 
 // ---------- Jeneratör / ışık ----------
-const DAY_LENGTH = 180; // saniye
+const DAY_LENGTH = 300; // saniye
 let lightLeft = DAY_LENGTH;
+let darkScheduled = false;
 const lightFill = document.getElementById('light-fill');
 const LAMP_MAX = 6, CEIL_MAX = 14;
 const bulbColor = new THREE.Color(0xffe2a8);
 
 // ---------- Döngü ----------
 const clock = new THREE.Clock();
+const tmp = new THREE.Vector3();
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
@@ -633,14 +1117,27 @@ function tick() {
 
   updateTweens(dt);
 
-  // Damga animasyonu: kalk → bas → geri dön
-  for (let i = stampAnims.length - 1; i >= 0; i--) {
-    const a = stampAnims[i];
+  // Kol animasyonu: kendine doğru çek → geri bırak
+  for (let i = leverAnims.length - 1; i >= 0; i--) {
+    const a = leverAnims[i];
     a.t += dt;
-    const p = a.t / 0.4;
-    a.stamp.position.y = a.stamp.userData.baseY + Math.sin(Math.min(1, p) * Math.PI) * 0.06;
-    if (p >= 1) { a.stamp.position.y = a.stamp.userData.baseY; stampAnims.splice(i, 1); }
+    const p = Math.min(1, a.t / 0.6);
+    a.pivot.rotation.x = -0.35 + Math.sin(p * Math.PI) * 0.85;
+    if (p >= 1) { a.pivot.rotation.x = -0.35; leverAnims.splice(i, 1); }
   }
+
+  // Terazi göstergesi hedefe doğru titreyerek oturur
+  if (Math.abs(scaleReading - scaleTarget) > 0.5) {
+    scaleReading += (scaleTarget - scaleReading) * Math.min(1, dt * 8);
+    drawScale(scaleReading + (Math.random() - 0.5) * 3);
+  } else if (scaleReading !== scaleTarget) {
+    scaleReading = scaleTarget;
+    drawScale(scaleReading);
+  }
+
+  // İmlecin masadaki noktası (UV fener buraya tutulur)
+  raycaster.setFromCamera(mouse, camera);
+  raycaster.ray.intersectPlane(deskPlane, cursorPoint);
 
   // Jeneratör: ışık azalır; azaldıkça titreme artar
   lightLeft = Math.max(0, lightLeft - dt);
@@ -651,18 +1148,42 @@ function tick() {
   if (Math.random() < flickerChance) k *= Math.random() * 0.5;
   k *= 0.98 + Math.sin(t * 50) * 0.02;
   if (ratio === 0) k = 0;
-  lamp.intensity = LAMP_MAX * k;
-  ceiling.intensity = CEIL_MAX * k;
-  ambient.intensity = 0.15 + 0.75 * k;
-  tube.material.color.setScalar(0.15 + 0.85 * k);
-  bulb.material.color.copy(bulbColor).multiplyScalar(0.3 + 0.7 * k);
+  const uvOn = tool === 'uv' && ratio > 0;
+  const room = uvOn ? k * 0.25 : k;
+  lamp.intensity = LAMP_MAX * room;
+  ceiling.intensity = CEIL_MAX * room;
+  ambient.intensity = 0.1 + 0.8 * room;
+  tube.material.color.setScalar(0.15 + 0.85 * room);
+  bulb.material.color.copy(bulbColor).multiplyScalar(0.3 + 0.7 * room);
+  if (ratio === 0 && !dayOver && !darkScheduled) { darkScheduled = true; setTimeout(() => endDay('dark'), 1500); }
+
+  uvLight.intensity = uvOn ? 9 : 0;
+  uvLight.position.set(cursorPoint.x, DESK_TOP + 0.55, cursorPoint.z + 0.3);
+  uvLight.target.position.copy(cursorPoint);
+
+  // UV mürekkebi yalnızca fener yakınken parlar
+  if (current) for (const it of current.items) {
+    if (!it.uvMark) continue;
+    it.uvMark.getWorldPosition(tmp);
+    const d = Math.hypot(tmp.x - cursorPoint.x, tmp.z - cursorPoint.z);
+    it.uvMark.material.opacity = uvOn ? Math.min(1, Math.max(0, (0.16 - d) / 0.08)) : 0;
+    if (it.uvMark.material.opacity > 0.6 && !it.uvFound) {
+      it.uvFound = true;
+      SFX.aha();
+      toast('UV ışığında gizli yazı: "' + it.data.uv.join(' ') + '"', 'aha');
+    }
+  }
 
   // Hover
-  const h = hoverTarget();
-  hint.textContent = h ? h.text : 'Paket banttan gelir · Tıkla: masaya al → tıkla: aç → damgala';
-  const clickable = h && (h.id === 'approve' || h.id === 'seize' ||
-    (h.id === 'package' && (current.state === 'belt' || current.state === 'desk')));
-  document.body.style.cursor = clickable ? 'pointer' : 'default';
+  const h = dayOver ? null : hoverTarget();
+  hint.textContent = h ? h.text : (current && current.state === 'open'
+    ? 'El: teraziye koy · 1 Neşter: kes · 2 UV: gizli yazı ara · Sonra kolu çek'
+    : 'Paket banttan gelir · Tıkla: masaya al → tıkla: aç');
+  const clickable = h && (
+    ((h.id === 'approve' || h.id === 'seize') && canDecide()) ||
+    (h.id === 'package' && (current.state === 'belt' || current.state === 'desk')) ||
+    (h.id === 'item' && tool !== 'uv') || (h.id === 'contraband' && !h.it.inTray));
+  renderer.domElement.style.cursor = tool === 'knife' ? 'crosshair' : clickable ? 'pointer' : 'default';
 
   renderer.render(scene, camera);
   requestAnimationFrame(tick);
