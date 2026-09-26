@@ -54,11 +54,17 @@
 <div id="cursor" hidden></div>
 <div id="overlay">
   <div class="card">
-    <h2>MASA BAŞI DENETÇİ · GÜN 1</h2>
+    <h2>MASA BAŞI DENETÇİ</h2>
     <p>Sen de bir mahkûmsun ve bu masada idare adına paket denetliyorsun. Ama direniş de seni bekliyor: bazı paketlerde sana yazılmış notlar var.</p>
-    <p>Lambanın dibindeki ibre idarenin sana olan <span class="amb">şüphesini</span> gösterir. Kırmızıya vurursa deşifre olursun. Çekmecenin dibindeki çentikler <span class="amb">isyanın</span> ne kadar yaklaştığını.</p>
-    <p>Masadaki <span class="amb">DENETÇİ EL KİTABI</span> her şeyi anlatır: <kbd>B</kbd> ile aç, <kbd>←</kbd> <kbd>→</kbd> ile çevir. <kbd>Sağ tık basılı</kbd>: eğil · <kbd>F basılı</kbd>: tara</p>
-    <button id="start">Masaya otur</button>
+    <p>Her sabah masaya <span class="amb">yeni bir alet</span> konur ve yalnız kendi eşyasına işler. Gün 1: <span class="amb">bıçak</span> (yiyecek) · Gün 2: <span class="amb">tornavida</span> (mekanik) · Gün 3: <span class="amb">dikiş sökücü</span> (kumaş).</p>
+    <p>Lambanın dibindeki ibre idarenin <span class="amb">şüphesi</span>, çekmecenin dibindeki çentikler <span class="amb">isyan</span>. Masadaki <span class="amb">DENETÇİ EL KİTABI</span> her şeyi anlatır: <kbd>B</kbd> ile aç, <kbd>←</kbd> <kbd>→</kbd> ile çevir.</p>
+    <ul>
+      <li><kbd>1</kbd> El · <kbd>2</kbd> Bıçak · <kbd>3</kbd> Tornavida · <kbd>4</kbd> Dikiş sökücü</li>
+      <li><kbd>5</kbd> Cımbız · <kbd>6</kbd> Sahte onay · <kbd>7</kbd> Spatula · <kbd>8</kbd> Asit</li>
+      <li><kbd>F basılı</kbd>: tara · <kbd>Sağ tık basılı</kbd>: eğil · <kbd>Esc</kbd>: aleti bırak</li>
+    </ul>
+    <button id="start">Masaya otur · Gün 1</button>
+    <p style="margin-top:14px;font-size:12px">Deneme için doğrudan başla: <button data-day="1" style="margin:0 4px;padding:4px 10px">Gün 2</button><button data-day="2" style="margin:0;padding:4px 10px">Gün 3</button></p>
   </div>
 </div>
 
@@ -391,6 +397,14 @@ const SFX = {
     o.connect(f).connect(g).connect(a.destination);
     o.start(); lfo.start(); o.stop(a.currentTime + 0.55); lfo.stop(a.currentTime + 0.55);
   },
+  // Ekmek kabuğu çıtırtısı ve bıçağın metale çarpması
+  slice: () => { for (let i = 0; i < 5; i++) setTimeout(() => noise(0.05, { freq: 2600 + Math.random() * 2000, q: 3, gain: 0.18 }), i * 35); },
+  clank: () => { tone(1900, 0.14, { type: 'triangle', gain: 0.25, slide: -600 }); tone(3100, 0.08, { type: 'square', gain: 0.05 }); },
+  tick: () => noise(0.025, { freq: 4200, q: 8, gain: 0.2 }),
+  screwOut: () => { tone(1500, 0.06, { type: 'triangle', gain: 0.12 }); setTimeout(() => tone(900, 0.1, { type: 'triangle', gain: 0.1, slide: -300 }), 60); },
+  snip: () => { noise(0.05, { freq: 5000, q: 5, gain: 0.3 }); tone(2200, 0.04, { type: 'square', gain: 0.05 }); },
+  stitch: () => { noise(0.03, { freq: 3500, q: 6, gain: 0.25 }); tone(600, 0.05, { type: 'triangle', gain: 0.08, slide: 400 }); },
+  puff: () => noise(0.18, { freq: 900, q: 0.5, gain: 0.15, type: 'lowpass' }),
   klaxon: () => tone(440, 0.28, { type: 'square', gain: 0.08, slide: -120 }),
   siren: () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(i % 2 ? 620 : 880, 0.45, { type: 'square', gain: 0.06 }), i * 460); },
 };
@@ -453,9 +467,8 @@ function wrapText(x, text, px, py, maxW, lh) {
 }
 
 // ---------- Kaçak nesneler ----------
-// Şema türü → model. Kategori vizör modunu belirler (METAL / ORGANIK / MUREKKEP).
 const CONTRABAND = {
-  SHARJOR: { name: 'Tabanca şarjörü', category: 'METAL', size: 0.03, make() {
+  SHARJOR: { name: 'Tabanca şarjörü', size: 0.03, make() {
     const g = new THREE.Group();
     const body = new THREE.Mesh(new THREE.BoxGeometry(0.022, 0.075, 0.045), std(0x1a1a1a, { metalness: 0.5, roughness: 0.4 }));
     body.rotation.z = 0.12;
@@ -463,7 +476,7 @@ const CONTRABAND = {
     tip.position.set(0.004, 0.042, 0.01);
     g.add(body, tip);
     return g; } },
-  JILET: { name: 'Jilet (3 adet)', category: 'METAL', size: 0.022, make() {
+  JILET: { name: 'Jilet (3 adet)', size: 0.022, make() {
     const g = new THREE.Group();
     const m = std(0xdfe4e6, { metalness: 0.5, roughness: 0.2 });
     for (let i = 0; i < 3; i++) {
@@ -473,7 +486,7 @@ const CONTRABAND = {
       g.add(b);
     }
     return g; } },
-  MERMI: { name: 'Tabanca mermisi (6 adet)', category: 'METAL', size: 0.022, make() {
+  MERMI: { name: 'Tabanca mermisi (6 adet)', size: 0.022, make() {
     const g = new THREE.Group();
     const brass = std(0xc9a040, { metalness: 0.5, roughness: 0.3 });
     const lead = std(0x777777, { metalness: 0.4, roughness: 0.4 });
@@ -486,7 +499,7 @@ const CONTRABAND = {
       g.add(c, h);
     }
     return g; } },
-  UYUSTURUCU: { name: 'Uyuşturucu paketi', category: 'ORGANIK', size: 0.026, make() {
+  UYUSTURUCU: { name: 'Uyuşturucu paketi', size: 0.026, organic: true, make() {
     const g = new THREE.Group();
     const bag = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.014, 0.032), std(0xe8e4d8, { roughness: 0.3, transparent: true, opacity: 0.85 }));
     bag.position.y = 0.007;
@@ -499,204 +512,369 @@ const CONTRABAND = {
       g.add(pill);
     }
     return g; } },
-  // Gizli yazı fiziksel değildir: eşyanın yüzeyinde görünmez mürekkep olarak durur
-  GIZLI_YAZI: { name: 'Gizli mürekkeple yazı', category: 'MUREKKEP' },
+  MIKROFILM: { name: 'Mikrofilm rulosu', size: 0.016, make() {
+    const g = new THREE.Group();
+    const reel = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.022, 14), std(0x1a1a1a, { roughness: 0.4 }));
+    reel.rotation.z = Math.PI / 2;
+    const film = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.001, 0.016), std(0x5a3a18, { roughness: 0.2, transparent: true, opacity: 0.8 }));
+    film.position.set(0.024, -0.008, 0);
+    g.add(reel, film);
+    return g; } },
+  TELSIZ: { name: 'Gizli telsiz alıcısı', size: 0.028, make() {
+    const g = new THREE.Group();
+    const box = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.018, 0.034), std(0x2e3a28, { roughness: 0.6 }));
+    box.position.y = 0.009;
+    const led = new THREE.Mesh(new THREE.SphereGeometry(0.003, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3020 }));
+    led.position.set(0.018, 0.019, 0.012);
+    const ant = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.05, 5), std(0xb8bcb8, { metalness: 0.5 }));
+    ant.rotation.z = 1.2; ant.position.set(-0.035, 0.02, 0);
+    g.add(box, led, ant);
+    return g; } },
 };
 
-// Gizli mürekkep: çıplak gözle görünmez; yalnızca vizörün Mürekkep modunda merceğe düşer
-function makeInkMark(lines, w, h) {
-  const { c, ctx: x, tex } = canvasTex(320, 200);
-  x.textAlign = 'center';
-  x.fillStyle = '#ffffff';
-  x.font = 'bold 44px Courier New';
-  lines.forEach((l, i) => x.fillText(l, 160, 80 + i * 60));
-  x.strokeStyle = '#ffffff'; x.lineWidth = 4;
-  x.strokeRect(14, 14, 292, 172);
-  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({
-    map: tex, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: false }));
+// ---------- Eşya sınıfları ----------
+// Her sınıfın tek bir aleti var: YİYECEK → bıçak (dilimle), MEKANİK → tornavida (vida sök), KUMAŞ → dikiş sökücü (dikiş patlat).
+// make(data, hidden) → model; model.userData.mech mekanik durumunu, userData.hidePos kaçağın yerini taşır.
+const CLASS_TOOL = { food: 'knife', mech: 'screwdriver', fabric: 'ripper' };
+const CLASS_NAME = { food: 'yiyecek', mech: 'vidalı/mekanik eşya', fabric: 'dikişli/kumaş eşya' };
+
+// Dilimlenebilir yiyecek: x ekseni boyunca dizili dilimlerden oluşur. Bıçak iki dilimin arasından geçer.
+function makeSliceable({ len, dep, hgt, segs, side, crumb, top, topH = 0 }, hidden) {
+  const g = new THREE.Group();
+  const segW = len / segs;
+  const sideM = std(side), crumbM = std(crumb, { roughness: 1 }), topM = top ? std(top, { roughness: 0.6 }) : null;
+  const parts = [];
+  for (let i = 0; i < segs; i++) {
+    const seg = new THREE.Group();
+    const mats = [crumbM, crumbM, sideM, sideM, sideM, sideM];
+    if (i === 0) mats[1] = sideM;
+    if (i === segs - 1) mats[0] = sideM;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(segW - 0.0005, hgt, dep), mats);
+    b.position.y = hgt / 2;
+    seg.add(b);
+    if (topH) {
+      const tp = new THREE.Mesh(new THREE.BoxGeometry(segW - 0.0005, topH, dep + 0.003), topM);
+      tp.position.y = hgt + topH / 2;
+      seg.add(tp);
+    }
+    seg.position.x = -len / 2 + segW * (i + 0.5);
+    g.add(seg);
+    parts.push(seg);
+  }
+  // Kaçak iki dilimin sınırında durur (1..segs-1 arasındaki bir sınır)
+  const kb = 2 + Math.floor(Math.random() * (segs - 3));
+  g.userData.mech = { kind: 'slice', parts, segs, segW, len, top: hgt + topH, cuts: new Set(), hideBoundary: hidden ? kb : -1, damaged: false };
+  g.userData.hidePos = new THREE.Vector3(-len / 2 + kb * segW, hgt * 0.5, (Math.random() - 0.5) * dep * 0.4);
+  return g;
 }
 
-// ---------- İncelenebilir eşyalar ----------
-// precise: neşter kaçağın tam üstüne saplanmalı · probe: iğne geçer · depth: vizörün odaklanacağı derinlik
-const halfCyl = (r, h, s, mat) => new THREE.Mesh(new THREE.CylinderGeometry(r, r, h, 28, 1, false, s > 0 ? 0 : Math.PI, Math.PI), mat);
-const cutFace = (w, h, s, mat) => { const f = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); f.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2; return f; };
+// Vidalı eşya: üstte vidalı arka kapak; içinde devre kartı ve kablolar (ya da pil yuvası)
+function makeScrewed({ body, bodyColor, panel, screws, board = true, extra }, hidden, cbType) {
+  const g = new THREE.Group();
+  const bodyM = std(bodyColor, { roughness: 0.5 });
+  const bx = new THREE.Mesh(new THREE.BoxGeometry(...body), bodyM);
+  bx.position.y = body[1] / 2;
+  g.add(bx);
+  if (extra) extra(g);
+  const topY = body[1];
+  // İç kısım (kapak kalkınca görünür)
+  const inside = new THREE.Group();
+  inside.position.y = topY - 0.004;
+  const cavity = new THREE.Mesh(new THREE.BoxGeometry(panel[0] - 0.01, 0.002, panel[1] - 0.01), std(0x151515));
+  inside.add(cavity);
+  const wires = [];
+  let device = null;
+  if (board) {
+    const pcb = new THREE.Mesh(new THREE.BoxGeometry(panel[0] - 0.03, 0.003, panel[1] - 0.03), std(0x2a5a2a, { roughness: 0.5 }));
+    pcb.position.y = 0.002;
+    inside.add(pcb);
+    // Üç kablo: kırmızı, mavi, sarı. Kaçak varsa bir tanesi cihaza gider.
+    const colors = [0xc0281c, 0x2848c0, 0xd8b020];
+    const toDevice = hidden ? Math.floor(Math.random() * 3) : -1;
+    colors.forEach((col, i) => {
+      const z = (i - 1) * panel[1] * 0.28;
+      const x0 = -panel[0] * 0.35, x1 = i === toDevice ? panel[0] * 0.18 : panel[0] * 0.35;
+      const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(x0, 0.004, z), new THREE.Vector3((x0 + x1) / 2, 0.016, z + 0.008), new THREE.Vector3(x1, 0.004, z)]);
+      const w = new THREE.Mesh(new THREE.TubeGeometry(curve, 16, 0.0028, 6, false), std(col, { roughness: 0.4 }));
+      w.userData.wire = { toDevice: i === toDevice, color: ['kırmızı', 'mavi', 'sarı'][i] };
+      const hit = new THREE.Mesh(new THREE.BoxGeometry(Math.abs(x1 - x0), 0.03, panel[1] * 0.2), new THREE.MeshBasicMaterial({ visible: false }));
+      hit.position.set((x0 + x1) / 2, 0.01, z);
+      w.add(hit);
+      inside.add(w);
+      wires.push(w);
+    });
+    if (hidden) {
+      device = CONTRABAND[cbType].make();
+      const z = (toDevice - 1) * panel[1] * 0.28;
+      device.position.set(panel[0] * 0.3, 0.004, z);
+      inside.add(device);
+    }
+  } else {
+    // Pil yuvası: iki pil ya da onların yerinde kaçak
+    if (hidden) {
+      device = CONTRABAND[cbType].make();
+      device.position.set(0, 0.002, 0);
+      inside.add(device);
+    } else {
+      for (const x of [-0.022, 0.022]) {
+        const bat = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, 0.04, 12), std(0x2a6a3a, { metalness: 0.3 }));
+        bat.rotation.z = Math.PI / 2; bat.position.set(x, 0.009, 0);
+        inside.add(bat);
+      }
+    }
+  }
+  g.add(inside);
+  // Arka kapak ve vidalar
+  const cover = new THREE.Group();
+  const plate = new THREE.Mesh(new THREE.BoxGeometry(panel[0], 0.005, panel[1]), std(0x3a3228, { roughness: 0.6 }));
+  cover.add(plate);
+  const screwMeshes = [];
+  const sx = panel[0] / 2 - 0.012, sz = panel[1] / 2 - 0.012;
+  const spots = screws === 4 ? [[-sx, -sz], [sx, -sz], [-sx, sz], [sx, sz]] : [[-sx, 0], [sx, 0]];
+  for (const [x, z] of spots) {
+    const screw = new THREE.Group();
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.003, 12), std(0xb8bcb8, { metalness: 0.6, roughness: 0.3 }));
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(0.009, 0.001, 0.0015), std(0x222222));
+    slot.position.y = 0.0016;
+    const hit = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.02, 8), new THREE.MeshBasicMaterial({ visible: false }));
+    screw.add(head, slot, hit);
+    screw.position.set(x, 0.004, z);
+    screw.userData.screw = { turned: 0, out: false };
+    cover.add(screw);
+    screwMeshes.push(screw);
+  }
+  cover.position.y = topY + 0.0025;
+  g.add(cover);
+  g.userData.mech = { kind: 'screw', cover, screws: screwMeshes, wires, device, open: false, board, damaged: false };
+  g.userData.hidePos = device ? new THREE.Vector3(device.position.x, topY + 0.01, device.position.z) : new THREE.Vector3(0, topY * 0.5, 0);
+  return g;
+}
+
+// Dikişli eşya: bir dikiş hattı ve arkasında açılan kapak. Kurcalanmış dikiş kalın ve düzensizdir.
+function makeSewn(builder, hidden, rough) {
+  const g = new THREE.Group();
+  const spec = builder(g);   // { seam: {from, to}, flap: group, flapOpen(k), stuffing, hidePos }
+  const stitches = [];
+  const n = 7;
+  const thread = std(rough ? 0x1e140a : 0xd8ccb0, { roughness: 0.8 });
+  for (let i = 0; i < n; i++) {
+    const t = (i + 0.5) / n;
+    const p = spec.seam.from.clone().lerp(spec.seam.to, t);
+    const st = new THREE.Group();
+    const bar = new THREE.Mesh(new THREE.BoxGeometry(rough ? 0.013 : 0.009, rough ? 0.003 : 0.0018, rough ? 0.003 : 0.0018), thread.clone());
+    if (rough) bar.rotation.y = (Math.random() - 0.5) * 0.9;
+    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.018, 0.02, 0.014), new THREE.MeshBasicMaterial({ visible: false }));
+    st.add(bar, hit);
+    st.position.copy(p);
+    st.quaternion.copy(spec.seam.quat || new THREE.Quaternion());
+    st.userData.stitch = true;
+    g.add(st);
+    stitches.push(st);
+  }
+  g.userData.mech = { kind: 'seam', stitches, flap: spec.flap, flapOpen: spec.flapOpen, open: false, stuffing: spec.stuffing, damaged: false };
+  g.userData.hidePos = spec.hidePos;
+  return g;
+}
 
 const ITEMS = {
-  PASTA: { name: 'Doğum günü pastası', w: 0.2, precise: true, probe: true, hiddenY: 0.03, spot: [0.05, 0.04], depth: 95,
-    ink: { pos: [0, 0.0755, 0.02], rotX: -Math.PI / 2, w: 0.1, h: 0.062 },
-    make() {
-      const g = new THREE.Group();
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.06, 28), std(0x7a4426));
-      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.092, 0.092, 0.015, 28), std(0xefe6d6, { roughness: 0.5 }));
+  // ---- 1. gün: YİYECEK (bıçak) ----
+  EKMEK: { name: 'Somun ekmek', cls: 'food', w: 0.26,
+    make: (d, hidden) => makeSliceable({ len: 0.24, dep: 0.1, hgt: 0.065, segs: 8, side: 0xa86a32, crumb: 0xead6a4, top: 0x8a5220, topH: 0.012 }, hidden) },
+  PASTA: { name: 'Doğum günü pastası', cls: 'food', w: 0.22,
+    make: (d, hidden) => {
+      const g = makeSliceable({ len: 0.2, dep: 0.14, hgt: 0.055, segs: 7, side: 0x4a2a14, crumb: 0x7a4426, top: 0xefe6d6, topH: 0.015 }, hidden);
       const candle = new THREE.Mesh(new THREE.CylinderGeometry(0.004, 0.004, 0.035, 8), std(0xd94f5c));
-      base.position.y = 0.03; top.position.y = 0.0675; candle.position.set(0.03, 0.092, -0.03);
-      g.add(base, top, candle);
-      g.userData.whole = [base, top, candle];
+      candle.position.y = 0.087;
+      g.userData.mech.parts[3].add(candle);
       return g;
-    },
-    cut(g) {
-      g.userData.whole.forEach(m => { m.visible = false; });
-      const sponge = std(0x7a4426), icing = std(0xefe6d6, { roughness: 0.5, side: THREE.DoubleSide });
-      const crumb = std(0xc9965a, { roughness: 1, side: THREE.DoubleSide });
-      const halves = [];
-      for (const s of [1, -1]) {
-        const h = new THREE.Group();
-        const b = halfCyl(0.09, 0.06, s, sponge); b.position.y = 0.03;
-        const t = halfCyl(0.092, 0.015, s, icing); t.position.y = 0.0675;
-        const f = cutFace(0.18, 0.06, s, crumb); f.position.y = 0.03;
-        const fi = cutFace(0.184, 0.015, s, icing); fi.position.y = 0.0675;
-        h.add(b, t, f, fi);
-        g.add(h);
-        halves.push({ h, s });
-      }
-      return { halves, spread: 0.035 };
     } },
+  PEYNIR: { name: 'Kaşar peyniri', cls: 'food', w: 0.18,
+    make: (d, hidden) => makeSliceable({ len: 0.16, dep: 0.1, hgt: 0.07, segs: 6, side: 0xd8a830, crumb: 0xf3d77a }, hidden) },
 
-  KONSERVE: { name: 'Konserve', w: 0.09, hiddenY: 0.06, depth: 170,
-    ink: { pos: [0, 0.045, 0.037], rotX: 0, w: 0.06, h: 0.038 },
-    make() {
-      const g = new THREE.Group();
-      const metal = std(0xa0a6a6, { metalness: 0.6, roughness: 0.35, side: THREE.DoubleSide });
-      const tin = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.09, 20, 1, true), metal);
-      const bottom = new THREE.Mesh(new THREE.CircleGeometry(0.035, 20), metal);
-      const label = new THREE.Mesh(new THREE.CylinderGeometry(0.0355, 0.0355, 0.05, 20, 1, true), std(0x8a2e24));
-      const lid = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.004, 20), metal);
-      tin.position.y = label.position.y = 0.045;
-      bottom.rotation.x = Math.PI / 2; bottom.position.y = 0.001;
-      lid.position.y = 0.09;
-      g.add(tin, bottom, label, lid);
-      g.userData.lid = lid;
-      return g;
-    },
-    cut(g, hidden) {
-      const lid = g.userData.lid;
-      tween(lid, new THREE.Vector3(0.055, 0.004, 0.02), { dur: 0.45, arc: 0.07 });
-      const fill = new THREE.Mesh(new THREE.CircleGeometry(0.034, 20), std(hidden ? 0x2e2418 : 0x7a4a22, { roughness: 0.25 }));
-      fill.rotation.x = -Math.PI / 2;
-      fill.position.y = hidden ? 0.055 : 0.08;
-      g.add(fill);
-      return { halves: [], spread: 0 };
-    } },
+  // ---- 2. gün: MEKANİK (tornavida) ----
+  RADYO: { name: 'Lambalı radyo', cls: 'mech', w: 0.24,
+    make: (d, hidden, cb) => makeScrewed({ body: [0.22, 0.09, 0.14], bodyColor: 0x4a2a18, panel: [0.18, 0.1], screws: 4,
+      extra: g => {
+        const grille = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.003), std(0xc8b890, { roughness: 0.9 }));
+        grille.position.set(-0.04, 0.045, 0.071);
+        const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.012, 14), std(0x1a1a1a));
+        knob.rotation.x = Math.PI / 2; knob.position.set(0.07, 0.045, 0.075);
+        g.add(grille, knob);
+      } }, hidden, cb) },
+  SAAT: { name: 'Masa saati', cls: 'mech', w: 0.14,
+    make: (d, hidden, cb) => makeScrewed({ body: [0.12, 0.06, 0.1], bodyColor: 0x6a5a3a, panel: [0.1, 0.08], screws: 4,
+      extra: g => {
+        const face = new THREE.Mesh(new THREE.CircleGeometry(0.024, 20), std(0xefe8d4, { roughness: 0.6 }));
+        face.position.set(0, 0.03, 0.0505);
+        const hand = new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.018, 0.001), std(0x111111));
+        hand.position.set(0, 0.036, 0.052);
+        g.add(face, hand);
+      } }, hidden, cb) },
+  FENER: { name: 'El feneri', cls: 'mech', w: 0.18,
+    make: (d, hidden, cb) => makeScrewed({ body: [0.16, 0.045, 0.05], bodyColor: 0x3a4a3a, panel: [0.1, 0.04], screws: 2, board: false,
+      extra: g => {
+        const head = new THREE.Mesh(new THREE.CylinderGeometry(0.032, 0.026, 0.03, 16), std(0x8a8a80, { metalness: 0.5 }));
+        head.rotation.z = Math.PI / 2; head.position.set(0.09, 0.024, 0);
+        const lens = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), std(0xeef6ff, { roughness: 0.1 }));
+        lens.rotation.y = Math.PI / 2; lens.position.set(0.1055, 0.024, 0);
+        g.add(head, lens);
+      } }, hidden, cb) },
 
-  PELUS_AYI: { name: 'Peluş ayı', w: 0.11, probe: true, hiddenY: 0.045, depth: 45,
-    ink: { pos: [0, 0.047, 0.046], rotX: -0.35, w: 0.07, h: 0.044 },
-    make(data) {
-      const g = new THREE.Group();
+  // ---- 3. gün: KUMAŞ (dikiş sökücü) ----
+  AYI: { name: 'Peluş ayı', cls: 'fabric', w: 0.12,
+    make: (d, hidden) => makeSewn(g => {
       const fur = std(0x7a5634, { roughness: 1 });
-      const body = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), fur);
-      body.position.y = 0.045;
-      const upper = new THREE.Group();
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12), fur); body.position.y = 0.045;
       const head = new THREE.Mesh(new THREE.SphereGeometry(0.033, 14, 10), fur); head.position.y = 0.11;
       const e1 = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), fur); e1.position.set(-0.025, 0.14, 0);
       const e2 = e1.clone(); e2.position.x = 0.025;
       const snout = new THREE.Mesh(new THREE.SphereGeometry(0.013, 8, 6), std(0xb08a60, { roughness: 1 })); snout.position.set(0, 0.105, 0.03);
-      upper.add(head, e1, e2, snout);
-      g.add(body, upper);
-      g.userData.whole = [body];
-      // İpucu: göbekte sonradan dikilmiş kaba dikiş
-      if (data && data.roughStitch) {
-        const thread = std(0x1e140a);
-        const line = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.045, 0.003), thread);
-        line.position.set(0, 0.045, 0.045);
-        g.add(line);
-        g.userData.whole.push(line);
-        for (let i = -2; i <= 2; i++) {
-          const st = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.002, 0.003), thread);
-          st.position.set(0, 0.045 + i * 0.009, 0.0452);
-          g.add(st);
-          g.userData.whole.push(st);
-        }
-      }
-      g.userData.upper = upper;
-      return g;
-    },
-    cut(g) {
-      g.userData.whole.forEach(m => { m.visible = false; });
-      const fur = std(0x7a5634, { roughness: 1, side: THREE.DoubleSide });
-      const stuffing = std(0xeeeae0, { roughness: 1, side: THREE.DoubleSide });
-      const halves = [];
-      for (const s of [1, -1]) {
-        const h = new THREE.Group();
-        const b = new THREE.Mesh(new THREE.SphereGeometry(0.045, 16, 12, s > 0 ? Math.PI / 2 : -Math.PI / 2, Math.PI), fur);
-        b.position.y = 0.045;
-        const f = new THREE.Mesh(new THREE.CircleGeometry(0.044, 16), stuffing);
-        f.position.y = 0.045; f.rotation.y = s > 0 ? -Math.PI / 2 : Math.PI / 2;
-        h.add(b, f);
-        if (s > 0) { g.remove(g.userData.upper); h.add(g.userData.upper); }
-        g.add(h);
-        halves.push({ h, s });
-      }
-      for (let i = 0; i < 4; i++) {
-        const p = new THREE.Mesh(new THREE.SphereGeometry(0.01 + Math.random() * 0.006, 8, 6), stuffing);
-        p.position.set((Math.random() - 0.5) * 0.02, 0.03 + i * 0.01, (Math.random() - 0.5) * 0.04);
-        g.add(p);
-      }
-      return { halves, spread: 0.032 };
-    } },
-
+      g.add(body, head, e1, e2, snout);
+      // Göbek kapağı: dikiş hattının sağında menteşeli yama
+      const flap = new THREE.Group();
+      const patch = new THREE.Mesh(new THREE.CircleGeometry(0.028, 16), std(0x6a4a2c, { roughness: 1, side: THREE.DoubleSide }));
+      patch.position.x = -0.028;
+      flap.add(patch);
+      flap.position.set(0.028, 0.045, 0.0452);
+      g.add(flap);
+      const hole = new THREE.Mesh(new THREE.CircleGeometry(0.026, 16), std(0x1a120a));
+      hole.position.set(0, 0.045, 0.0448);
+      g.add(hole);
+      return { seam: { from: new THREE.Vector3(0, 0.02, 0.046), to: new THREE.Vector3(0, 0.07, 0.046) }, flap,
+        flapOpen: k => { flap.rotation.y = 2.2 * k; }, stuffing: 3, hidePos: new THREE.Vector3(0, 0.05, 0.05) };
+    }, hidden, d.roughStitch) },
+  CEKET: { name: 'Katlanmış ceket', cls: 'fabric', w: 0.22,
+    make: (d, hidden) => makeSewn(g => {
+      const cloth = std(0x4a5236, { roughness: 1 });
+      const base = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.03, 0.16), cloth); base.position.y = 0.015;
+      const collar = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.012, 0.03), std(0x3a4228, { roughness: 1 })); collar.position.set(0, 0.034, -0.06);
+      g.add(base, collar);
+      // Astar kapağı: üstteki dikiş hattından açılır
+      const flap = new THREE.Group();
+      const liner = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.004, 0.07), std(0x6a2a2a, { roughness: 0.8 }));
+      liner.position.z = 0.035;
+      flap.add(liner);
+      flap.position.set(0, 0.032, 0.005);
+      g.add(flap);
+      const pocket = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.001, 0.06), std(0x1a1410));
+      pocket.position.set(0, 0.0305, 0.04);
+      g.add(pocket);
+      return { seam: { from: new THREE.Vector3(-0.06, 0.034, 0.005), to: new THREE.Vector3(0.06, 0.034, 0.005) }, flap,
+        flapOpen: k => { flap.rotation.x = -2.3 * k; }, stuffing: 0, hidePos: new THREE.Vector3(0, 0.034, 0.04) };
+    }, hidden, d.roughStitch) },
+  AYAKKABI: { name: 'Deri ayakkabı', cls: 'fabric', w: 0.22,
+    make: (d, hidden) => makeSewn(g => {
+      const sole = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.08), std(0x2a1a10, { roughness: 0.8 })); sole.position.y = 0.01;
+      const cavity = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.001, 0.05), std(0x0e0a06)); cavity.position.set(-0.05, 0.0205, 0);
+      g.add(sole, cavity);
+      // Ayakkabının üst kısmı topuktan kalkar
+      const flap = new THREE.Group();
+      // menteşe burunda: topuk tarafı kalkar
+      const upper = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.05, 0.07), std(0x4a2a16, { roughness: 0.5 })); upper.position.set(-0.085, 0.025, 0);
+      const toe = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2), upper.material); toe.scale.set(1, 1.2, 1);
+      flap.add(upper, toe);
+      flap.position.set(0.08, 0.02, 0);
+      g.add(flap);
+      return { seam: { from: new THREE.Vector3(-0.09, 0.021, 0.041), to: new THREE.Vector3(0.05, 0.021, 0.041) }, flap,
+        flapOpen: k => { flap.rotation.z = -0.8 * k; }, stuffing: 0, hidePos: new THREE.Vector3(-0.05, 0.03, 0) };
+    }, hidden, d.roughStitch) },
 };
 
-// ---------- Günün sevkiyatları (paket şeması) ----------
+// ---------- Günler ve sevkiyatlar ----------
+// Her gün bir yeni alet açılır; önceki günlerin aletleri kalır.
 // manifesto.declaredItems: belgede yazanlar · items: gerçekte çıkanlar (actual = terazideki gram)
-// isResistancePackage: direnişin paketi mi · resistanceNote.where: 'manifest' (belgenin arkası) | 'base' (kutunun tabanı)
-const SHIPMENTS = [
-  { id: 'PKG_741_B', no: '7741-B', prisonerId: 'B-302', container: 'gift',
-    manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'PASTA', grams: 1000 }], officialSealValid: false },
-    items: [{ key: 'PASTA', actual: 1320 }],
-    contraband: { exists: true, type: 'SHARJOR', item: 0, isBoobyTrapped: false },
-    isResistancePackage: true,
-    resistanceNote: { exists: true, where: 'manifest', targetFaction: 'RED_CELLS',
-      text: 'Hücre B-302: Pastadaki şarjör cuma günkü isyan için. Kesme. Sahte mühürle içeri sızdır. — K.H.' },
-    illegalText: 'Pastanın içinde tabanca şarjörü vardı.' },
-  { id: 'PKG_742_A', no: '7742-A', prisonerId: 'A-418', container: 'crate',
-    manifesto: { declaredSender: 'M. Dragan (Anne)', declaredItems: [{ key: 'KONSERVE', grams: 400 }, { key: 'KONSERVE', grams: 400 }], officialSealValid: true },
-    items: [{ key: 'KONSERVE', actual: 402 }, { key: 'KONSERVE', actual: 398 }],
-    contraband: { exists: false },
-    isResistancePackage: false, resistanceNote: { exists: false },
-    illegalText: null },
-  { id: 'PKG_743_C', no: '7743-C', prisonerId: 'C-107', container: 'sack',
-    manifesto: { declaredSender: 'L. Petrov (Kızı)', declaredItems: [{ key: 'PELUS_AYI', grams: 250 }], officialSealValid: false },
-    items: [{ key: 'PELUS_AYI', actual: 318, roughStitch: true }],
-    contraband: { exists: true, type: 'JILET', item: 0, isBoobyTrapped: false },
-    isResistancePackage: true,
-    resistanceNote: { exists: true, where: 'base', targetFaction: 'BLACK_CROWN',
-      text: 'Jiletler ayının karnında. Ya olduğu gibi sızdır ya da çekip masanın altına sakla. — Kara Taç' },
-    illegalText: 'Ayının içine jilet dikilmişti.' },
-  { id: 'PKG_744_A', no: '7744-A', prisonerId: 'A-733', container: 'sack',
-    manifesto: { declaredSender: 'I. Kovacs (Kardeş)', declaredItems: [{ key: 'PELUS_AYI', grams: 250 }, { key: 'KONSERVE', grams: 400 }], officialSealValid: true },
-    items: [{ key: 'PELUS_AYI', actual: 248 }, { key: 'KONSERVE', actual: 402 }],
-    contraband: { exists: false },
-    isResistancePackage: false, resistanceNote: { exists: false },
-    illegalText: null },
-  // Direnişin değil: çete malı. Geçirmek idare gözünde hata; not bir muhbirden.
-  { id: 'PKG_745_E', no: '7745-E', prisonerId: 'E-520', container: 'gift',
-    manifesto: { declaredSender: 'R. Ionescu (Annesi)', declaredItems: [{ key: 'PASTA', grams: 800 }], officialSealValid: false },
-    items: [{ key: 'PASTA', actual: 862 }],
-    contraband: { exists: true, type: 'UYUSTURUCU', item: 0, isBoobyTrapped: true },
-    isResistancePackage: false,
-    resistanceNote: { exists: true, where: 'manifest', targetFaction: 'NONE',
-      text: 'Denetçiye: bu pasta çetenin. Geçirirsen seni ihbar ederim. İçinde kapsül var, dikkat. — Muhbir 12' },
-    illegalText: 'Pastanın içinde uyuşturucu paketi vardı.' },
-  { id: 'PKG_745_D', no: '7745-D', prisonerId: 'B-302', container: 'crate',
-    manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'KONSERVE', grams: 400 }, { key: 'KONSERVE', grams: 400 }], officialSealValid: false },
-    items: [{ key: 'KONSERVE', actual: 401 }, { key: 'KONSERVE', actual: 562 }],
-    contraband: { exists: true, type: 'MERMI', item: 1, isBoobyTrapped: false },
-    isResistancePackage: true,
-    resistanceNote: { exists: true, where: 'base', targetFaction: 'RED_CELLS',
-      text: 'Mermiler ikinci konservede. B-302\'ye. — K.H.' },
-    illegalText: 'Konservelerden birinde mermi vardı.' },
-  { id: 'PKG_746_B', no: '7746-B', prisonerId: 'A-418', container: 'gift',
-    manifesto: { declaredSender: 'A. Dragan (Eşi)', declaredItems: [{ key: 'PASTA', grams: 900 }, { key: 'PELUS_AYI', grams: 250 }], officialSealValid: true },
-    items: [{ key: 'PASTA', actual: 904 }, { key: 'PELUS_AYI', actual: 252 }],
-    contraband: { exists: true, type: 'GIZLI_YAZI', item: 1, text: ['KAÇIŞ', 'ÇAMAŞIRHANE 03:00'], isBoobyTrapped: false },
-    isResistancePackage: true,
-    resistanceNote: { exists: true, where: 'manifest', targetFaction: 'BLACK_CROWN',
-      text: 'Ayının karnındaki yazı çamaşırhane ekibine. Sahte mühürle geçir. — Kara Taç' },
-    illegalText: 'Ayının üzerinde gizli mürekkeple firar planı yazılıydı.' },
+// contraband.item: kaçağın saklandığı eşyanın sırası · resistanceNote.where: 'manifest' (belgenin arkası) | 'base' (kutunun tabanı)
+const P = (o) => ({ contraband: { exists: false }, isResistancePackage: false, resistanceNote: { exists: false }, illegalText: null, ...o });
+const DAYS = [
+  { n: 1, tool: 'knife', toolName: 'BIÇAK', toolLine: 'Yiyecekleri dilimler: pasta, ekmek, peynir.',
+    shipments: [
+      P({ no: '7741-B', prisonerId: 'B-302', container: 'gift',
+        manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'PASTA', grams: 1000 }], officialSealValid: false },
+        items: [{ key: 'PASTA', actual: 1320 }],
+        contraband: { exists: true, type: 'SHARJOR', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'RED_CELLS', text: 'Hücre B-302: Pastadaki şarjör cuma günkü isyan için. Kesme. Sahte mühürle içeri sızdır. — K.H.' },
+        illegalText: 'Pastanın içinde tabanca şarjörü vardı.' }),
+      P({ no: '7742-A', prisonerId: 'A-418', container: 'crate',
+        manifesto: { declaredSender: 'M. Dragan (Anne)', declaredItems: [{ key: 'EKMEK', grams: 600 }, { key: 'PEYNIR', grams: 500 }], officialSealValid: true },
+        items: [{ key: 'EKMEK', actual: 603 }, { key: 'PEYNIR', actual: 498 }] }),
+      P({ no: '7743-C', prisonerId: 'C-107', container: 'sack',
+        manifesto: { declaredSender: 'L. Petrov (Kızı)', declaredItems: [{ key: 'EKMEK', grams: 600 }], officialSealValid: false },
+        items: [{ key: 'EKMEK', actual: 655 }],
+        contraband: { exists: true, type: 'JILET', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'base', targetFaction: 'BLACK_CROWN', text: 'Jiletler ekmeğin içinde. Ya olduğu gibi sızdır ya da çekip masanın altına sakla. — Kara Taç' },
+        illegalText: 'Ekmeğin içine jilet gömülmüştü.' }),
+      P({ no: '7744-E', prisonerId: 'E-520', container: 'gift',
+        manifesto: { declaredSender: 'R. Ionescu (Annesi)', declaredItems: [{ key: 'PEYNIR', grams: 500 }], officialSealValid: false },
+        items: [{ key: 'PEYNIR', actual: 560 }],
+        contraband: { exists: true, type: 'UYUSTURUCU', item: 0 },
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'NONE', text: 'Denetçiye: bu peynir çetenin. Geçirirsen seni ihbar ederim. — Muhbir 12' },
+        illegalText: 'Peynirin içinde uyuşturucu paketi vardı.' }),
+      P({ no: '7745-D', prisonerId: 'B-302', container: 'crate',
+        manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'EKMEK', grams: 600 }, { key: 'PASTA', grams: 900 }], officialSealValid: false },
+        items: [{ key: 'EKMEK', actual: 614 }, { key: 'PASTA', actual: 902 }],
+        contraband: { exists: true, type: 'MIKROFILM', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'RED_CELLS', text: 'Ekmekteki film çamaşırhanenin planı. Terazi fark etmez, sen de etme. — K.H.' },
+        illegalText: 'Ekmeğin içinde mikrofilm vardı.' }),
+    ] },
+  { n: 2, tool: 'screwdriver', toolName: 'TORNAVİDA', toolLine: 'Vidalı eşyaları söker: radyo, saat, fener.',
+    shipments: [
+      P({ no: '8201-A', prisonerId: 'B-302', container: 'crate',
+        manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'RADYO', grams: 1800 }], officialSealValid: false },
+        items: [{ key: 'RADYO', actual: 1862 }],
+        contraband: { exists: true, type: 'TELSIZ', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'base', targetFaction: 'RED_CELLS', text: 'Radyonun içindeki alıcı hücreler arası haberleşme için. Açma, geçir. — K.H.' },
+        illegalText: 'Radyonun içine gizli telsiz alıcısı bağlanmıştı.' }),
+      P({ no: '8202-C', prisonerId: 'A-418', container: 'gift',
+        manifesto: { declaredSender: 'A. Dragan (Eşi)', declaredItems: [{ key: 'SAAT', grams: 400 }, { key: 'PASTA', grams: 800 }], officialSealValid: true },
+        items: [{ key: 'SAAT', actual: 402 }, { key: 'PASTA', actual: 801 }] }),
+      P({ no: '8203-B', prisonerId: 'C-107', container: 'sack',
+        manifesto: { declaredSender: 'L. Petrov (Kızı)', declaredItems: [{ key: 'FENER', grams: 300 }], officialSealValid: false },
+        items: [{ key: 'FENER', actual: 362 }],
+        contraband: { exists: true, type: 'MERMI', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'BLACK_CROWN', text: 'Fenerin pil yuvasında mermi var. Kara Taç bekliyor. — K.T.' },
+        illegalText: 'Fenerin pil yuvasında mermi vardı.' }),
+      P({ no: '8204-A', prisonerId: 'A-733', container: 'crate',
+        manifesto: { declaredSender: 'I. Kovacs (Kardeş)', declaredItems: [{ key: 'RADYO', grams: 1800 }], officialSealValid: true },
+        items: [{ key: 'RADYO', actual: 1801 }] }),
+      P({ no: '8205-E', prisonerId: 'E-520', container: 'gift',
+        manifesto: { declaredSender: 'R. Ionescu (Annesi)', declaredItems: [{ key: 'SAAT', grams: 400 }], officialSealValid: false },
+        items: [{ key: 'SAAT', actual: 446 }],
+        contraband: { exists: true, type: 'JILET', item: 0 },
+        resistanceNote: { exists: true, where: 'base', targetFaction: 'NONE', text: 'Saatin içindekiler çeteye. Ağzını açarsan bilirsin. — imzasız' },
+        illegalText: 'Saatin içinde jilet vardı.' }),
+    ] },
+  { n: 3, tool: 'ripper', toolName: 'DİKİŞ SÖKÜCÜ', toolLine: 'Dikişleri tek tek patlatır: ayı, ceket, ayakkabı.',
+    shipments: [
+      P({ no: '8611-C', prisonerId: 'C-107', container: 'sack',
+        manifesto: { declaredSender: 'L. Petrov (Kızı)', declaredItems: [{ key: 'AYI', grams: 250 }], officialSealValid: false },
+        items: [{ key: 'AYI', actual: 318, roughStitch: true }],
+        contraband: { exists: true, type: 'JILET', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'base', targetFaction: 'BLACK_CROWN', text: 'Ayının karnında jilet. Kaba dikişi fark ettiysen sus. — Kara Taç' },
+        illegalText: 'Ayının içine jilet dikilmişti.' }),
+      P({ no: '8612-A', prisonerId: 'A-418', container: 'crate',
+        manifesto: { declaredSender: 'M. Dragan (Anne)', declaredItems: [{ key: 'CEKET', grams: 900 }, { key: 'AYAKKABI', grams: 700 }], officialSealValid: true },
+        items: [{ key: 'CEKET', actual: 902 }, { key: 'AYAKKABI', actual: 698 }] }),
+      P({ no: '8613-B', prisonerId: 'B-302', container: 'gift',
+        manifesto: { declaredSender: 'E. Varga (Eş)', declaredItems: [{ key: 'AYAKKABI', grams: 700 }], officialSealValid: false },
+        items: [{ key: 'AYAKKABI', actual: 762, roughStitch: true }],
+        contraband: { exists: true, type: 'MERMI', item: 0 }, isResistancePackage: true,
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'RED_CELLS', text: 'Topuğun altında mermi. Son parti. Cuma gecesi. — K.H.' },
+        illegalText: 'Ayakkabının topuğunda mermi vardı.' }),
+      P({ no: '8614-E', prisonerId: 'E-520', container: 'sack',
+        manifesto: { declaredSender: 'R. Ionescu (Annesi)', declaredItems: [{ key: 'CEKET', grams: 900 }], officialSealValid: false },
+        items: [{ key: 'CEKET', actual: 958, roughStitch: true }],
+        contraband: { exists: true, type: 'UYUSTURUCU', item: 0 },
+        resistanceNote: { exists: true, where: 'manifest', targetFaction: 'NONE', text: 'Astarın içindeki mal çetenin. Muhbir 12 seni izliyor.' },
+        illegalText: 'Ceketin astarında uyuşturucu vardı.' }),
+      P({ no: '8615-A', prisonerId: 'A-733', container: 'crate',
+        manifesto: { declaredSender: 'I. Kovacs (Kardeş)', declaredItems: [{ key: 'AYI', grams: 250 }, { key: 'RADYO', grams: 1800 }], officialSealValid: true },
+        items: [{ key: 'AYI', actual: 251 }, { key: 'RADYO', actual: 1799 }] }),
+    ] },
 ];
 
 // ---------- Şüphe, isyan ve ekonomi ----------
 const SUSPICION_START = 10;      // %0–100; 100 = deşifre
+const SUSP_OVERNIGHT = -5;       // her gece biraz unutulur
 const SUSP_FORGED_LEAK = 3;      // sahte mühürle sızdırma
 const SUSP_RAW_LEAK = 25;        // mühürsüz (kaba) sızdırma
 const SUSP_LOYAL = -10;          // kaçağa el koymak müfettişin güvenini kazandırır
@@ -704,18 +882,19 @@ const SUSP_ERROR = 15;           // direnişin olmayan kaçağı geçirmek (idar
 const SUSP_WRONG_SEIZE = 10;     // temiz pakete el koymak
 const SUSP_RAID = 50;            // baskında masada yasaklı bir şey
 const SUSP_RAID_CLEAN = -5;      // baskından temiz çıkmak
-const RIOT_PER_LEAK = 25;        // sızan her direniş paketi (4 × 25 = isyan)
-const RIOT_PER_DRAWER = 15;      // çekmecede saklanıp gece teslim edilen her direniş kaçağı
+const RIOT_PER_LEAK = 20;        // sızan her direniş paketi (5 × 20 = isyan; üç günde 7 direniş paketi var)
+const RIOT_PER_DRAWER = 10;      // çekmecede saklanıp gece teslim edilen her direniş kaçağı
 const PAY_CORRECT = 10;
-const PAY_RUINED = 5;
 const FINE_DAMAGE = 3;
 const FINE_WRONG_SEIZE = 10;
 const FINE_ERROR = 15;
 const RAID_TIME = 5;             // müfettiş geliyor: saniye
-const RAID_CHANCE = 0.4;         // paket açıldığında baskın olasılığı (günde en az bir baskın garanti)
+const RAID_CHANCE = 0.35;        // paket açıldığında baskın olasılığı (günde en az bir baskın garanti)
 const REAGENT_DROPS = 10;
 const FACTION_NAME = { RED_CELLS: 'Kızıl Hücreler', BLACK_CROWN: 'Kara Taç', NONE: '—' };
 
+let dayIndex = 0;
+let SHIPMENTS = DAYS[0].shipments;
 let credits = 0;
 let suspicion = SUSPICION_START;
 let riot = 0;
@@ -831,28 +1010,33 @@ function flipManifest(toBack = !manifestFlipped) {
 }
 drawManifest(null);
 
-// Günün genelgesi (idarenin gözünden)
+// Günün genelgesi (idarenin gözünden); her sabah yenisi raptiyelenir
 const rules = makePaper(0.19, 0.26, 480);
 rules.mesh.rotation.z = -0.12;
 rules.mesh.position.set(-0.7, DESK_TOP + 0.001, -0.09);
 scene.add(rules.mesh);
-{
+function drawRules() {
+  const day = DAYS[dayIndex];
   const { ctx: x, c } = rules;
   x.fillStyle = '#e2dcc8'; x.fillRect(0, 0, c.width, c.height);
   x.fillStyle = '#8a1d18'; x.fillRect(0, 0, c.width, 62);
-  x.fillStyle = '#f0e8d0'; x.font = 'bold 28px Courier New'; x.fillText('GÜN 1 · GENELGE', 26, 42);
+  x.fillStyle = '#f0e8d0'; x.font = 'bold 28px Courier New'; x.fillText(`GÜN ${day.n} · GENELGE`, 26, 42);
   x.fillStyle = '#2a241a';
-  let y = 98;
-  const head = t => { x.font = 'bold 21px Courier New'; x.fillText(t, 26, y); y += 28; };
-  const line = t => { x.font = '18px Courier New'; x.fillText(t, 26, y); y += 25; };
-  head('YASAK');
+  let y = 96;
+  const head = t => { x.font = 'bold 21px Courier New'; x.fillText(t, 26, y); y += 27; };
+  const line = t => { x.font = '18px Courier New'; x.fillText(t, 26, y); y += 24; };
+  head('YENİ ALET: ' + day.toolName);
+  x.font = '18px Courier New';
+  y = wrapText(x, day.toolLine, 26, y, c.width - 52, 23) + 4;
+  line('Alet yalnız kendi eşyasına işler.');
+  y += 6; head('YASAK');
   line('▪ Silah, mühimmat, kesici alet');
-  line('▪ Uyuşturucu · gizli mesaj');
+  line('▪ Uyuşturucu · gizli belge');
   y += 6; head('USUL');
   line('Kaçak bulunursa el konur,');
   line('paket prese gönderilir.');
-  line('Mühür şüpheliyse kazı ve');
-  line('ayıraç damlat (mavi = gerçek).');
+  line('Şüpheli mühürü kazı, asit');
+  line('damlat (mavi = gerçek).');
   y += 6; head('PRİM / CEZA (kr)');
   line(`Kaçağa el koyma        +${PAY_CORRECT}`);
   line(`Temiz paket onayı      +${PAY_CORRECT}`);
@@ -860,12 +1044,11 @@ scene.add(rules.mesh);
   line(`Haksız el koyma        -${FINE_WRONG_SEIZE}`);
   line(`Kaçak geçirme          -${FINE_ERROR}`);
   y += 6; head('UYARI');
-  line('Müfettiş denetimi habersiz');
-  line('yapılır. Masanız her an');
-  line('temiz olmalıdır.');
+  line('Müfettiş denetimi habersizdir.');
   x.fillStyle = '#b8342a'; x.beginPath(); x.arc(c.width / 2, 20, 9, 0, Math.PI * 2); x.fill();
   rules.tex.needsUpdate = true;
 }
+drawRules();
 
 // ---------- Terazi (masaya gömülü, kırmızı LED) ----------
 const SCALE_POS = new THREE.Vector3(0.5, DESK_TOP, 0.11);
@@ -1058,7 +1241,7 @@ function nextReceipt() {
   x.textAlign = 'right'; x.fillText(r.credits + ' kr', 242, 326); x.textAlign = 'left';
   x.font = '16px Courier New';
   x.fillText(`PAKET ${r.processed}/${SHIPMENTS.length}`, 14, 356);
-  x.fillText('GÜN 1', 14, 384);
+  x.fillText('GÜN ' + DAYS[dayIndex].n, 14, 384);
   const LEN = 0.14, W = 0.085;
   const geo = new THREE.PlaneGeometry(W, LEN);
   geo.translate(0, -LEN / 2, 0);
@@ -1213,41 +1396,103 @@ function drawReagentLabel() {
 }
 drawReagentLabel();
 
-const TOOLS = {
-  hand:     { key: '1', name: 'El' },
-  needle:   { key: '2', name: 'İğne' },
-  knife:    { key: '3', name: 'Neşter' },
-  tweezers: { key: '4', name: 'Cımbız' },
-  spatula:  { key: '5', name: 'Spatula' },
-  forged:   { key: '6', name: 'Sahte onay damgası' },
-  reagent:  { key: '7', name: 'Asit (ayıraç)' },
+// Günlerle açılan aletler
+TOOL_BUILD.knife = () => {
+  // Tırtıklı ekmek bıçağı
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.013, 0.013, 0.06), std(0x5a3a22, { roughness: 0.7 }));
+  handle.position.z = 0.035;
+  const blade = new THREE.Mesh(new THREE.BoxGeometry(0.002, 0.022, 0.1), std(0xd8dcde, { metalness: 0.5, roughness: 0.2 }));
+  blade.position.set(0, 0.003, -0.045);
+  g.add(handle, blade);
+  return g;
+};
+TOOL_BUILD.screwdriver = () => {
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.008, 0.06, 10), std(0xc8a020, { roughness: 0.5 }));
+  handle.rotation.x = Math.PI / 2; handle.position.z = 0.03;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0022, 0.0022, 0.07, 8), std(0xb8bcb8, { metalness: 0.6, roughness: 0.3 }));
+  shaft.rotation.x = Math.PI / 2; shaft.position.z = -0.035;
+  const tip = new THREE.Mesh(new THREE.BoxGeometry(0.005, 0.001, 0.006), shaft.material);
+  tip.position.z = -0.071;
+  g.add(handle, shaft, tip);
+  return g;
+};
+TOOL_BUILD.ripper = () => {
+  const g = new THREE.Group();
+  const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 10), std(0x2848a0, { roughness: 0.5 }));
+  handle.rotation.x = Math.PI / 2; handle.position.z = 0.02;
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0016, 0.0016, 0.03, 6), std(0xd0d4d6, { metalness: 0.5, roughness: 0.2 }));
+  shaft.rotation.x = Math.PI / 2; shaft.position.z = -0.02;
+  for (const s of [-1, 1]) {
+    const prong = new THREE.Mesh(new THREE.BoxGeometry(0.0012, 0.0012, 0.012), shaft.material);
+    prong.position.set(s * 0.0022, 0, -0.039); prong.rotation.y = s * 0.25;
+    g.add(prong);
+  }
+  const ball = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 8, 6), std(0xd02a1a));
+  ball.position.set(0.0028, 0, -0.043);
+  g.add(handle, shaft, ball);
+  return g;
 };
 
-// Masadaki yerleri: üç alet sağ öndeki paspasta, spatula ve asit test kabının yanında, sahte damga çekmecede
+const TOOLS = {
+  hand:        { key: '1', name: 'El' },
+  knife:       { key: '2', name: 'Bıçak', day: 1, cls: 'food' },
+  screwdriver: { key: '3', name: 'Tornavida', day: 2, cls: 'mech' },
+  ripper:      { key: '4', name: 'Dikiş sökücü', day: 3, cls: 'fabric' },
+  tweezers:    { key: '5', name: 'Cımbız' },
+  forged:      { key: '6', name: 'Sahte onay damgası' },
+  spatula:     { key: '7', name: 'Spatula' },
+  reagent:     { key: '8', name: 'Asit (ayıraç)' },
+};
+const toolUnlocked = t => !TOOLS[t].day || TOOLS[t].day <= DAYS[dayIndex].n;
+
+// Masadaki yerleri: dört alet sağ öndeki paspasta, spatula ve asit test kabının yanında, sahte damga çekmecede
 const rack = new THREE.Group();
 {
-  const mat = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.004, 0.14), std(0x1c1f1c, { roughness: 1 }));
+  const mat = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.004, 0.15), std(0x1c1f1c, { roughness: 1 }));
   mat.position.y = 0.002;
   rack.add(mat);
-  rack.position.set(0.85, DESK_TOP, 0.15);
+  rack.position.set(0.83, DESK_TOP, 0.15);
   scene.add(rack);
 }
 const rackTools = {};
+const lockPlates = {};
 function placeTool(k, parent, pos, rotY = Math.PI * 0.08, build = k) {
   const m = TOOL_BUILD[build]();
   shadowAll(m);
   m.rotation.y = rotY;
   m.position.copy(pos);
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 0.12), new THREE.MeshBasicMaterial({ visible: false }));
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.06, 0.13), new THREE.MeshBasicMaterial({ visible: false }));
   m.add(hit);
   parent.add(m);
   rackTools[k] = m;
 }
-placeTool('needle', rack, new THREE.Vector3(-0.07, 0.008, 0));
-placeTool('knife', rack, new THREE.Vector3(0, 0.008, 0));
-placeTool('tweezers', rack, new THREE.Vector3(0.07, 0.008, 0));
+[['knife', -0.105], ['screwdriver', -0.035], ['ripper', 0.035], ['tweezers', 0.105]].forEach(([k, x]) => {
+  placeTool(k, rack, new THREE.Vector3(x, 0.008, 0));
+  if (TOOLS[k].day) {
+    // Henüz açılmamış aletin yerinde küçük pirinç plaka
+    const t = canvasTex(128, 64);
+    t.ctx.fillStyle = '#8a7a4a'; t.ctx.fillRect(0, 0, 128, 64);
+    t.ctx.fillStyle = '#2a2418'; t.ctx.font = 'bold 26px Courier New'; t.ctx.textAlign = 'center';
+    t.ctx.fillText(`GÜN ${TOOLS[k].day}`, 64, 42);
+    t.tex.needsUpdate = true;
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.045, 0.022), new THREE.MeshStandardMaterial({ map: t.tex, roughness: 0.5 }));
+    plate.rotation.x = -Math.PI / 2;
+    plate.position.set(x, 0.0045, 0.04);
+    rack.add(plate);
+    lockPlates[k] = plate;
+  }
+});
 placeTool('spatula', scene, new THREE.Vector3(-0.16, DESK_TOP + 0.005, -0.27), 1.2);
 placeTool('reagent', scene, new THREE.Vector3(-0.34, DESK_TOP, -0.27), 0);
+function refreshRack() {
+  for (const k of ['knife', 'screwdriver', 'ripper']) {
+    const open = toolUnlocked(k);
+    rackTools[k].visible = open && tool !== k;
+    lockPlates[k].visible = !open;
+  }
+}
 
 // ---------- Gizli direniş zulası: masanın sağ altındaki çekmece ----------
 const DRAWER_CLOSED_Z = 0.1, DRAWER_TRAVEL = 0.26;
@@ -1372,47 +1617,47 @@ const BOOK = [
   [{ t: 'cover' }],
   [{ t: 'h', s: 'BÖLÜM 1 · GÖREV' },
    { t: 'm', s: 'Madde 1.1', b: 'Denetçi de bir mahkûmdur. İdare adına paket denetler; bazı paketler ise direniş adına ona gelir.' },
-   { t: 'm', s: 'Madde 1.2 · Şüphe', b: 'Lambanın gövdesindeki paslı ibre idarenin sana olan şüphesidir. GÜVENLİ\'den DEŞİFRE\'ye gider. Sona vurursa deşifre olursun: infaz.' },
-   { t: 'm', s: 'Madde 1.3 · İsyan', b: `Direniş paketlerini içeri sızdırdıkça isyan yaklaşır (her biri %${RIOT_PER_LEAK}). %100 olunca kapılar içeriden kırılır. Sayaç çekmecenin dibindedir.` },
-   { t: 'm', s: 'Madde 1.4 · Döngü', b: '1) Paket gelir, şifre ara · 2) Mühürü doğrula, gerekirse sahte onay bas · 3) Tara, gerekiyorsa kes ve çek · 4) Kolu çek.' },
-   { t: 'm', s: 'Madde 1.5', b: 'Kâğıtları okumak için sağ tuşu basılı tut; masaya eğilirsin. Vardiya jeneratör yakıtı kadar sürer.' }],
+   { t: 'm', s: 'Madde 1.2 · Şüphe', b: 'Lambanın gövdesindeki paslı ibre idarenin şüphesidir: GÜVENLİ → DEŞİFRE. Sona vurursa infaz. Her gece biraz geri iner.' },
+   { t: 'm', s: 'Madde 1.3 · İsyan', b: `Sızan her direniş paketi isyanı %${RIOT_PER_LEAK} yaklaştırır. %100 olunca kapılar içeriden kırılır. Sayaç çekmecenin dibindedir.` },
+   { t: 'm', s: 'Madde 1.4 · Günler', b: 'Her sabah masaya yeni bir alet konur. Gün 1: bıçak. Gün 2: tornavida. Gün 3: dikiş sökücü. Eski aletler kalır.' },
+   { t: 'm', s: 'Madde 1.5 · Döngü', b: '1) Paket gelir, şifre ara · 2) Mühürü doğrula, gerekirse sahte onay · 3) Aç ve ara · 4) Kolu çek. Kâğıtları okumak için sağ tık basılı: eğil.' }],
   [{ t: 'h', s: 'AŞAMA 1 · İLK BAKIŞ VE ŞİFRE' },
    { t: 'm', s: 'Paketi al, aç', b: 'Bantta duran pakete tıkla: masaya gelir. Bir daha tıkla: açılır, eşyalar dizilir.' },
    { t: 'm', s: 'Manifestonun arkası', b: 'El (1) ile manifestoya tıkla: kâğıt çevrilir. Arkasında el yazısı not olabilir.' },
-   { t: 'm', s: 'Kutunun tabanı', b: 'Paket boşalınca el ile kutuya tıkla: kutuyu kaldırıp tabanına bakarsın. Notlar bazen oraya yapıştırılır.' },
-   { t: 'm', s: 'Not ne demek?', b: 'Direniş notu olan paket direniş paketidir. Notu okumadan karar verirsen neyi geçirdiğini bilmezsin. Her not dost değildir: muhbirler de yazar.' },
+   { t: 'm', s: 'Kutunun tabanı', b: 'Paket boşalınca el ile kutuya tıkla: kaldırıp tabanına bakarsın.' },
+   { t: 'm', s: 'Not ne demek?', b: 'Direniş notu olan paket direniş paketidir. Her not dost değildir: muhbirler ve çeteler de yazar.' },
    { t: 'm', s: 'Terazi', b: 'El ile eşyaya tıkla: teraziye konur. Manifestodaki gramdan ağırsa içinde bir şey vardır.' }],
   [{ t: 'h', s: 'AŞAMA 2 · MÜHÜR VE SAHTECİLİK' },
-   { t: 'm', s: 'Mühür testi', b: 'Spatula (5) ile paketin önündeki mum mühre tıkla: numune kaba düşer. Asit (7) ile kaba tıkla: MAVİ gerçek, KIRMIZI sahte (paket kurcalanmış).' },
-   { t: 'm', s: 'Sahte onay damgası (6)', b: 'Masanın sağ altındaki çekmecede durur. 6\'ya basınca çekmece gıcırdayarak açılır, damga eline gelir. Manifestonun ön yüzüne bas: idarenin DENETLENDİ damgasının aynısı.' },
+   { t: 'm', s: 'Mühür testi', b: 'Spatula (7) ile paketin önündeki mum mühre tıkla: numune kaba düşer. Asit (8) ile kaba tıkla: MAVİ gerçek, KIRMIZI sahte.' },
+   { t: 'm', s: 'Sahte onay damgası (6)', b: 'Masanın sağ altındaki çekmecede durur. 6\'ya basınca çekmece gıcırdayarak açılır, damga eline gelir. Manifestonun ön yüzüne bas.' },
    { t: 'm', s: 'Ne zaman?', b: 'Bir direniş paketini içeri sızdıracaksan, kolu çekmeden önce. Damgasız sızdırma idareyi çok kıllandırır.' },
-   { t: 'm', s: 'Çekmece', b: 'Ön yüzüne tıkla ya da aşağı sürükle: açılır. İş bitince kapat.' }],
-  [{ t: 'h', s: 'AŞAMA 3 · VİZÖR VE CIMBIZ' },
-   { t: 'm', s: 'Tarayıcı (F basılı)', b: 'İmlecin etrafında x-ray merceği açılır; eşyaların içindeki şüpheli lekeyi gösterir. Isınır: halka kızarır, 5 sn\'de sigorta atar, 6 sn çalışmaz.' },
-   { t: 'm', s: 'İğne (2)', b: 'Yumuşak eşyayı yoklar, zarar vermez. Sert bir şeye değerse kırmızı başlı iğne kalır. Mercekte nabız gibi atan kapsülü iğneyle del: tuzak söner.' },
-   { t: 'm', s: 'El koyacaksan', b: 'Neşter (3) ile lekenin tam üstünden kes, cımbız (4) ile kaçağı çek: delil tepsisine gider. Temiz eşyayı kesmek mal hasarıdır.' },
-   { t: 'm', s: 'Sızdıracaksan', b: 'Kesme. Kaçak içinde kalsın. Ya da çekmece açıkken cımbızla çek: çekmeceye saklanır, gece direnişe teslim edilir.' },
-   { t: 'm', s: 'Tuzak', b: 'Sönmemiş kapsülü kesersen gözlüğe mürekkep sıçrar: R basılı tut, sil.' }],
-  [{ t: 'h', s: 'AŞAMA 4 · STRATEJİK KARAR' },
-   { t: 'k', s: `YEŞİL KOL · direniş kaçağı içeride, sahte onay var: isyan +%${RIOT_PER_LEAK}, şüphe +%${SUSP_FORGED_LEAK}.` },
-   { t: 'k', s: `YEŞİL KOL · direniş kaçağı içeride, sahte onay yok: isyan +%${RIOT_PER_LEAK}, şüphe +%${SUSP_RAW_LEAK}.` },
-   { t: 'k', s: `YEŞİL KOL · çete kaçağı (direnişin değil) içeride: şüphe +%${SUSP_ERROR}, -${FINE_ERROR} kr.` },
-   { t: 'k', s: `YEŞİL KOL · temiz paket: +${PAY_CORRECT} kr.` },
-   { t: 'k', s: `KIRMIZI KOL · kaçak var: +${PAY_CORRECT} kr, şüphe -%${-SUSP_LOYAL}. Paket preste ezilir.` },
-   { t: 'k', s: `KIRMIZI KOL · temiz paket: -${FINE_WRONG_SEIZE} kr, şüphe +%${SUSP_WRONG_SEIZE}.` },
-   { t: 'k', s: `Çekmecede saklanan her direniş kaçağı vardiya sonunda isyan +%${RIOT_PER_DRAWER}.` },
-   { t: 'h', s: 'MÜFETTİŞ BASKINI' },
-   { t: 'k', s: `Tünelin üstündeki kırmızı lamba yanar: ${RAID_TIME} sn. Çekmeceyi kapat, masadaki açıkta kaçağı cımbızla tepsiye ya da çekmeceye al, sahte damgayı elinde tutma. Yakalanırsan şüphe +%${SUSP_RAID}.` }],
-  [{ t: 'h', s: 'EK · KISAYOLLAR' },
-   { t: 'k', s: '1 El · 2 İğne · 3 Neşter · 4 Cımbız · 5 Spatula · 6 Sahte onay damgası · 7 Asit' },
-   { t: 'k', s: 'F basılı: tara · Sağ tık basılı: eğil · B: el kitabı · R: gözlük sil · Esc: aleti bırak' },
+   { t: 'm', s: 'Tarayıcı (F basılı)', b: 'İmlecin etrafında x-ray merceği açılır; eşyanın içindeki yoğun lekeyi gösterir. Isınır: halka kızarır, 5 sn\'de sigorta atar.' }],
+  [{ t: 'h', s: 'AŞAMA 3 · ALETLER' },
+   { t: 'm', s: 'Kural', b: 'Her alet yalnız kendi eşyasına işler. Bıçak vidaya, tornavida ekmeğe dokunmaz.' },
+   { t: 'm', s: 'Gün 1 · Bıçak (2) · yiyecek', b: `Bıçak elindeyken farenin sol tuşunu basılı tutup ekmeğin üstünden aşağı doğru çek: o yerden dilimlenir. Metal "TAK" sesi = kaçak orada. Temiz yiyeceği kesmek: -${FINE_DAMAGE} kr.` },
+   { t: 'm', s: 'Gün 2 · Tornavida (3) · mekanik', b: 'Vidanın üstünde sol tuşu basılı tut, fareyi vidanın etrafında daire çizdir: tık-tık söker. Vidalar çıkınca kapak kalkar. İçeride yabancı cihaz varsa ona giden kabloyu cımbızla kopar. Yanlış kablo eşyayı bozar.' },
+   { t: 'm', s: 'Gün 3 · Dikiş sökücü (4) · kumaş', b: 'Kaba, koyu, düzensiz dikiş kurcalanmıştır. Dikişlere tek tek tıkla. Hepsi patlayınca kapak açılır; ayının pamuğunu elle boşalt. Temiz dikişi sökmek mal hasarıdır.' }],
+  [{ t: 'h', s: 'AŞAMA 3 · ÇIKARMA' },
+   { t: 'm', s: 'El koyacaksan', b: 'Aç, bul, cımbızla (5) çek: kaçak delil tepsisine gider, terazi düşer. Sonra kırmızı kol.' },
+   { t: 'm', s: 'Sızdıracaksan', b: 'Açma. Kaçak içinde kalsın, sahte onay bas, yeşil kol. Ya da çekmece açıkken cımbızla çek: çekmeceye saklanır, gece direnişe gider.' },
+   { t: 'h', s: 'AŞAMA 4 · KARAR' },
+   { t: 'k', s: `YEŞİL · direniş kaçağı + sahte onay: isyan +%${RIOT_PER_LEAK}, şüphe +%${SUSP_FORGED_LEAK}.` },
+   { t: 'k', s: `YEŞİL · direniş kaçağı, onaysız: isyan +%${RIOT_PER_LEAK}, şüphe +%${SUSP_RAW_LEAK}.` },
+   { t: 'k', s: `YEŞİL · çete kaçağı: şüphe +%${SUSP_ERROR}, -${FINE_ERROR} kr. · temiz: +${PAY_CORRECT} kr.` },
+   { t: 'k', s: `KIRMIZI · kaçak var: +${PAY_CORRECT} kr, şüphe -%${-SUSP_LOYAL}. · temiz: -${FINE_WRONG_SEIZE} kr, şüphe +%${SUSP_WRONG_SEIZE}.` },
+   { t: 'k', s: `Çekmecede saklanan direniş kaçağı: gece isyan +%${RIOT_PER_DRAWER}.` }],
+  [{ t: 'h', s: 'MÜFETTİŞ BASKINI' },
+   { t: 'k', s: `Tünelin üstündeki kırmızı lamba yanar: ${RAID_TIME} sn. Çekmeceyi kapat, açıkta kaçağı tepsiye ya da çekmeceye al, sahte damgayı elinde tutma. Yakalanırsan şüphe +%${SUSP_RAID}; temizsen -%${-SUSP_RAID_CLEAN}.` },
+   { t: 'h', s: 'KISAYOLLAR' },
+   { t: 'k', s: '1 El · 2 Bıçak · 3 Tornavida · 4 Dikiş sökücü · 5 Cımbız · 6 Sahte onay · 7 Spatula · 8 Asit' },
+   { t: 'k', s: 'F basılı: tara · Sağ tık basılı: eğil · B: el kitabı · Esc: aleti bırak' },
    { t: 'h', s: 'İMLEÇ' },
-   { t: 'k', s: 'Nokta: boşta · El: tıklanabilir · Göz: okunabilir kâğıt · Alet simgesi: elindeki alet · Halka: tarayıcı.' }],
+   { t: 'k', s: 'Nokta: boşta · Halka: tıklanabilir · Göz: okunabilir · Alet simgesi: elindeki alet · Artılı daire: tarayıcı.' }],
   [{ t: 'torn' },
    { t: 'hand', s: 'Bu masada benden önce oturan adamı cuma asacaklar. İbreyi kırmızıya yaklaştırdı.' },
-   { t: 'hand', s: 'Her paketi sızdırma. Arada bir kaçağa el koy; müfettiş seni sadık sansın, ibre geri iner.' },
-   { t: 'hand', s: 'Kırmızı lamba yanınca önce çekmece. Sonra masadaki ne varsa.' },
-   { t: 'hand', s: 'Dört paket yeter. Sonra çamaşırhane. — K.H.' }],
+   { t: 'hand', s: 'Her paketi sızdırma. Arada bir kaçağa el koy; müfettiş seni sadık sansın.' },
+   { t: 'hand', s: 'Ekmeği keserken metal sesi gelirse dur. Radyoda yabancı kabloyu bul. Kaba dikiş yalan söylemez.' },
+   { t: 'hand', s: 'Beş paket yeter. Sonra çamaşırhane. — K.H.' }],
 ];
 let bookOpen = false, bookSpread = 0;
 const SPREADS = Math.ceil(BOOK.length / 2);
@@ -1443,7 +1688,6 @@ function drawBookPage(t, page, num) {
       x.strokeStyle = '#8a1d18'; x.lineWidth = 3; x.beginPath(); x.moveTo(40, y + 12); x.lineTo(W - 40, y + 12); x.stroke();
       y += 60;
     } else if (b.t === 'h') {
-      if (y > 70) y += 16;
       x.fillStyle = '#2a241a'; x.font = 'bold 28px Courier New';
       x.fillText(b.s, 40, y);
       x.fillRect(40, y + 10, W - 80, 3);
@@ -1502,20 +1746,26 @@ const vmKey = new THREE.DirectionalLight(0xffe2b0, 1.4);
 vmKey.position.set(-1, 1, 1);
 vmScene.add(vmAmbient, vmKey);
 const held = {};
-for (const [k, build] of [['needle', 'needle'], ['knife', 'knife'], ['tweezers', 'tweezers'], ['spatula', 'spatula'], ['forged', 'fake'], ['reagent', 'reagent']]) {
+for (const [k, build] of [['knife', 'knife'], ['screwdriver', 'screwdriver'], ['ripper', 'ripper'], ['tweezers', 'tweezers'], ['spatula', 'spatula'], ['forged', 'fake'], ['reagent', 'reagent']]) {
   const m = TOOL_BUILD[build]();
   m.visible = false;
   m.scale.setScalar(0.65);
   vmScene.add(m);
   held[k] = m;
 }
-for (const k of ['needle', 'knife', 'tweezers', 'spatula']) held[k].position.set(0.16, -0.13, -0.34);
-held.needle.rotation.set(0.35, 0.45, -0.3);
+for (const k of ['knife', 'screwdriver', 'ripper', 'tweezers', 'spatula']) held[k].position.set(0.16, -0.13, -0.34);
 held.knife.rotation.set(0.35, 0.45, -0.5);
+held.screwdriver.rotation.set(0.35, 0.45, -0.3);
+held.ripper.rotation.set(0.35, 0.45, -0.3);
 held.tweezers.rotation.set(0.35, 0.45, -0.2);
 held.spatula.rotation.set(0.35, 0.45, -0.4);
 held.forged.position.set(0.16, -0.14, -0.33); held.forged.rotation.set(0.25, -0.3, 0);
 held.reagent.position.set(0.15, -0.14, -0.32); held.reagent.rotation.set(0.25, 0, -0.2);
+const HELD_BASE_Y = { knife: -0.13, screwdriver: -0.13, ripper: -0.13, tweezers: -0.13, spatula: -0.13, forged: -0.14, reagent: -0.14 };
+function jab(k = tool, depth = 0.04) {
+  const h = held[k]; if (!h) return;
+  animate(0.22, t => { h.position.y = HELD_BASE_Y[k] - Math.sin(t * Math.PI) * depth; });
+}
 
 const bookView = new THREE.Group();
 {
@@ -1534,9 +1784,9 @@ const bookView = new THREE.Group();
 // ---------- Tarayıcı (F basılı) ----------
 // Kaçak izleri ayrı bir çizim katmanında (layer 1) durur (Unreal'daki Custom Depth/Stencil maskesinin karşılığı).
 // Tarama sırasında bu katman ayrı bir hedefe çizilir ve imlecin etrafındaki x-ray merceğine leke olarak basılır.
-const LENS_RADIUS = 0.14;   // ekran yüksekliğine oranla
-const HEAT_UP = 1 / 5;      // 5 sn aralıksız tarama → sigorta
-const HEAT_DOWN = 1 / 9;    // 9 sn'de soğur
+const LENS_RADIUS = 0.14;
+const HEAT_UP = 1 / 5;
+const HEAT_DOWN = 1 / 9;
 const FUSE_TIME = 6;
 const LENS_COLD = new THREE.Color(0x8ff4ff), LENS_HOT = new THREE.Color(0xff3a2a);
 let scanning = false;
@@ -1563,7 +1813,7 @@ const lensMat = new THREE.ShaderMaterial({
       vec4 s = vec4(0.0); float tot = 0.0;
       for (int i = -2; i <= 2; i++) for (int j = -2; j <= 2; j++) {
         float w = 1.0 / (1.0 + float(i * i + j * j));
-        s += texture2D(tSig, vUv + vec2(float(i) / uAspect, float(j)) * 0.0012) * w; tot += w;
+        s += texture2D(tSig, vUv + vec2(float(i) / uAspect, float(j)) * 0.002) * w; tot += w;
       }
       s /= tot;
       float sig = max(max(s.r, s.g), s.b) * s.a;
@@ -1580,20 +1830,7 @@ const lensMat = new THREE.ShaderMaterial({
 const lensScene = new THREE.Scene();
 lensScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), lensMat));
 const lensCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-function allSigs() {
-  if (!current) return [];
-  const out = [...current.pkgSigs];
-  for (const it of current.items) if (it.sigs) out.push(...it.sigs);
-  return out;
-}
-function lensGap(worldPos) {
-  const p = worldPos.clone().project(camera);
-  const dx = (p.x - mouse.x) / 2 * (innerWidth / innerHeight), dy = (p.y - mouse.y) / 2;
-  return Math.hypot(dx, dy) / LENS_RADIUS;
-}
 function renderLens(t) {
-  for (const m of allSigs()) if (m.userData.trap) m.scale.setScalar(1 + 0.35 * Math.sin(t * 9));
   const bg = scene.background, fog = scene.fog;
   scene.background = null; scene.fog = null;
   camera.layers.set(1);
@@ -1607,29 +1844,10 @@ function renderLens(t) {
   lensMat.uniforms.uAspect.value = innerWidth / innerHeight;
   lensMat.uniforms.uTime.value = t;
   lensMat.uniforms.uTint.value.copy(LENS_COLD);
-  // Isındıkça merceğin halkası kızarır
   lensMat.uniforms.uRing.value.lerpColors(LENS_COLD, LENS_HOT, heat);
   renderer.autoClear = false;
   renderer.render(lensScene, lensCam);
   renderer.autoClear = true;
-}
-
-// ---------- Mürekkep tuzağı: gözlüğe sıçrayan leke ----------
-const inkCanvas = document.getElementById('ink');
-let inkLevel = 0, inkTimer = 0, wiping = false;
-function splashInk() {
-  inkCanvas.width = innerWidth; inkCanvas.height = innerHeight;
-  const x = inkCanvas.getContext('2d');
-  x.clearRect(0, 0, innerWidth, innerHeight);
-  for (let i = 0; i < 26; i++) {
-    const cx = innerWidth * (0.1 + Math.random() * 0.8), cy = innerHeight * (0.1 + Math.random() * 0.8);
-    const r = 40 + Math.random() * 160;
-    const g = x.createRadialGradient(cx, cy, r * 0.2, cx, cy, r);
-    g.addColorStop(0, 'rgba(30,10,60,0.97)'); g.addColorStop(0.7, 'rgba(50,15,90,0.9)'); g.addColorStop(1, 'rgba(50,15,90,0)');
-    x.fillStyle = g; x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill();
-  }
-  inkLevel = 1; inkTimer = 8;
-  SFX.splash();
 }
 
 // ---------- Paket akışı ----------
@@ -1640,20 +1858,21 @@ const ITEM_ROW_START = -0.28;
 const CONTAINER = { crate: makeCrate, sack: makeSack, gift: makeGift };
 const CONTAINER_NAME = { crate: 'Mühürlü tahta kutu', sack: 'Dikişli çuval', gift: 'Hediye paketi' };
 const SEAL_POS = { crate: [0, 0.12, 0.163], sack: [0.045, 0.17, 0.168], gift: [0, 0.09, 0.153] };
+const SLICE_GAP = 0.014;
+const SCREW_TURN = Math.PI * 3;     // bir vida 1,5 turda çıkar
 
 let current = null;
 let outgoing = [];
 let shipmentIndex = 0;
 let processed = 0;
 const results = [];
-let dayOver = false, started = false, busyEnding = false;
+let dayOver = true, started = false, busyEnding = false;
 
 function spawnNext() {
   if (dayOver || busyEnding) return;
   if (shipmentIndex >= SHIPMENTS.length) { endShift('done'); return; }
   const s = SHIPMENTS[shipmentIndex++];
   const mesh = CONTAINER[s.container]();
-  // Resmî mum mühür paketin önünde
   const seal = new THREE.Group();
   const wax = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.03, 0.008, 18), std(0x8e1b16, { roughness: 0.45 }));
   wax.rotation.x = Math.PI / 2;
@@ -1664,7 +1883,6 @@ function spawnNext() {
   const hit = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.03), new THREE.MeshBasicMaterial({ visible: false }));
   seal.add(hit);
   mesh.add(seal);
-  // Kutunun tabanına yapıştırılmış not
   if (s.resistanceNote.exists && s.resistanceNote.where === 'base') {
     const t = canvasTex(400, 260);
     t.ctx.fillStyle = '#e9e2cc'; t.ctx.fillRect(0, 0, 400, 260);
@@ -1676,22 +1894,13 @@ function spawnNext() {
     mesh.add(note);
   }
   shadowAll(mesh);
-  const pkgSigs = [];
-  if (s.manifesto.officialSealValid) {
-    // Gerçek mühürde idarenin görünmez amblemi: tarayıcıda halka olarak parlar
-    const uvRing = new THREE.Mesh(new THREE.TorusGeometry(0.02, 0.004, 6, 24), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
-    uvRing.position.z = 0.006;
-    uvRing.layers.set(1);
-    seal.add(uvRing);
-    pkgSigs.push(uvRing);
-  }
   mesh.position.set(SPAWN_X, BELT_Y, BELT_Z);
   mesh.rotation.y = (Math.random() - 0.5) * 0.3;
   scene.add(mesh);
   current = {
-    s, mesh, seal, pkgSigs, state: 'incoming', items: [],
-    cb: { ...s.contraband, inTray: false, inDrawer: false, ruined: false, found: false },
-    scraped: false, sampleTested: false, stamp: null, trapDefused: false, tilted: false, raidAt: undefined,
+    s, mesh, seal, state: 'incoming', items: [],
+    cb: { ...s.contraband, inTray: false, inDrawer: false, found: false },
+    scraped: false, sampleTested: false, stamp: null, tilted: false, raidAt: undefined,
   };
   dishChip.visible = false; dishLiquid.visible = false;
 }
@@ -1712,39 +1921,19 @@ function openPackage() {
   let x = ITEM_ROW_START;
   c.s.items.forEach((data, i) => {
     const def = ITEMS[data.key];
-    const model = def.make(data);
+    const hidden = c.cb.exists && c.cb.item === i;
+    const model = def.make(data, hidden, c.cb.type);
     shadowAll(model);
-    const sigs = [];
-    let blob = null, inkMark = null, trap = null;
-    const cb = c.cb;
-    if (cb.exists && cb.item === i) {
-      if (cb.type === 'GIZLI_YAZI') {
-        inkMark = makeInkMark(cb.text, def.ink.w, def.ink.h);
-        inkMark.position.set(...def.ink.pos);
-        inkMark.rotation.x = def.ink.rotX;
-        inkMark.layers.set(1);
-        model.add(inkMark);
-        sigs.push(inkMark);
-      } else {
-        const cdef = CONTRABAND[cb.type];
-        // Kaçağın yeri her oyunda biraz değişir (pasta gibi büyük eşyalarda anlamlı)
-        const sp = def.spot || [0, 0];
-        const sx = (Math.random() < 0.5 ? -1 : 1) * sp[0] * (0.5 + Math.random() * 0.5);
-        const sz = (Math.random() * 2 - 1) * sp[1];
-        blob = new THREE.Mesh(new THREE.SphereGeometry(cdef.size, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
-        blob.position.set(sx, def.hiddenY, sz);
-        blob.layers.set(1);
-        model.add(blob);
-        sigs.push(blob);
-        if (cb.isBoobyTrapped) {
-          trap = new THREE.Mesh(new THREE.SphereGeometry(0.014, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
-          trap.position.set(sx + (sx > 0 ? -0.035 : 0.035), def.hiddenY + 0.01, sz * 0.5);
-          trap.layers.set(1);
-          trap.userData.trap = true;
-          model.add(trap);
-          sigs.push(trap);
-        }
-      }
+    const mech = model.userData.mech;
+    if (mech.kind === 'slice') for (const p of mech.parts) p.userData.baseX = p.position.x;
+    // Tarayıcı izi: kaçağın yerinde, ayrı katmanda
+    let blob = null;
+    if (hidden) {
+      blob = new THREE.Mesh(new THREE.SphereGeometry(CONTRABAND[c.cb.type].size, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, fog: false }));
+      blob.position.copy(model.userData.hidePos);
+      blob.layers.set(1);
+      blob.castShadow = false;
+      model.add(blob);
     }
     const obj = new THREE.Group();
     obj.add(model);
@@ -1754,19 +1943,17 @@ function openPackage() {
     const slot = new THREE.Vector3(x + def.w / 2, DESK_TOP, ITEM_ROW_Z);
     x += def.w + 0.03;
     const declared = c.s.manifesto.declaredItems.filter(d => d.key === data.key)[0];
-    const it = { obj, model, def, data, slot, name: def.name, declared: declared ? declared.grams : 0,
-      actual: data.actual, blob, inkMark, trap, sigs, pins: 0, onScale: false, cut: false, extracted: false };
+    const it = { obj, model, def, data, mech, hidden, blob, slot, name: def.name, declared: declared ? declared.grams : 0,
+      actual: data.actual, onScale: false, extracted: false };
     c.items.push(it);
     tween(obj, slot, { dur: 0.55, arc: 0.12, delay: 0.35 + i * 0.2,
       done: () => { SFX.pop(); if (i === c.s.items.length - 1) { c.state = 'open'; maybeScheduleRaid(); } } });
   });
 }
 
-// Boş kutuyu kaldırıp tabanına bakmak
 function tiltBox() {
   const c = current;
   c.tilted = !c.tilted;
-  // Kutuyu kaldırıp tabanını kameraya çevir
   const from = c.mesh.rotation.x, to = c.tilted ? -1.9 : 0;
   const y0 = c.mesh.position.y, y1 = DESK_TOP + (c.tilted ? 0.22 : 0);
   SFX.lid();
@@ -1777,6 +1964,7 @@ const weightOf = it => it.extracted ? it.declared + 2 : it.actual;
 
 function toggleScale(it) {
   if (it.busy) return;
+  if (it.focused) { unfocusItem(it); return; }
   if (it.onScale) {
     it.busy = true; it.onScale = false; scaleItem = null; scaleTarget = 0;
     tween(it.obj, it.slot, { dur: 0.45, arc: 0.08, done: () => { it.busy = false; } });
@@ -1789,115 +1977,210 @@ function toggleScale(it) {
     done: () => { it.busy = false; it.onScale = true; scaleTarget = weightOf(it); SFX.beep(); } });
 }
 
-const tmpV = new THREE.Vector3();
-// Bakış çizgisi (imleçten geçen ışın) hedefe tol metreden yakın geçiyor mu
-const rayNear = (m, tol) => m && m.parent && raycaster.ray.distanceToPoint(m.getWorldPosition(tmpV)) < tol;
-
 function propertyDamage(it, what) {
+  if (it.mech.damaged) return;
+  it.mech.damaged = true;
   credits -= FINE_DAMAGE;
   SFX.buzz();
   printReceipt('MAL HASARI', `${it.name}: ${what}. Paket ${current.s.no}.`, -FINE_DAMAGE);
 }
 
-function maybeTrap(it) {
-  if (it.trap && !current.trapDefused) {
-    current.trapDefused = true;
-    current.cb.ruined = true;
-    it.model.remove(it.trap);
-    it.sigs = it.sigs.filter(m => m !== it.trap);
-    splashInk();
-    say('KAPSÜL PATLADI! Gözlüğüne mürekkep sıçradı. R basılı tut: sil.', 5000);
-  }
-}
-
-// İğne: yumuşak eşyayı deler, hasar vermez. Kaçağa ya da kapsüle değerse tıkırdar; kırmızı başlı iğne kalır.
-function probe(it, point) {
-  if (!it.def.probe) { say('İğne metal kutudan geçmez.'); SFX.needleHit(); return; }
-  if (it.cut) { say('Zaten açık.'); return; }
-  if (it.pins >= 6) { say('Bu eşyaya 6 iğne battı. Daha fazlası yok.'); return; }
-  const hitTrap = rayNear(it.trap, 0.03) && !current.trapDefused;
-  const hard = hitTrap || rayNear(it.blob, 0.035);
-  const dir = raycaster.ray.direction;
-  const pin = new THREE.Group();
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.0012, 0.0012, 0.05, 5), std(0xd0d4d6, { metalness: 0.5, roughness: 0.2 }));
-  shaft.rotation.x = Math.PI / 2;
-  shaft.position.z = hard ? 0.012 : -0.005;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 8, 6), std(hard ? 0xd02a1a : 0xf0f0e8, { roughness: 0.4 }));
-  head.position.z = shaft.position.z + 0.026;
-  pin.add(shaft, head);
-  pin.position.copy(point);
-  pin.lookAt(point.clone().sub(dir));
-  scene.add(pin);
-  it.model.attach(pin);
-  it.pins++;
-  if (hitTrap) {
-    current.trapDefused = true;
-    it.model.remove(it.trap);
-    it.sigs = it.sigs.filter(m => m !== it.trap);
-    const stain = new THREE.Mesh(new THREE.CircleGeometry(0.02, 14), std(0x2a0a4a, { roughness: 0.3 }));
-    stain.rotation.x = -Math.PI / 2;
-    it.model.add(stain);
-    stain.position.copy(it.model.worldToLocal(point.clone())); stain.position.y += 0.001;
-    SFX.needleHit(); SFX.drip();
-    say('Kapsül delindi, mürekkep boşaldı. Tuzak söndü.');
-  } else if (hard) { SFX.needleHit(); say('Sert bir şeye çarptı! (kırmızı iğne)'); }
-  else { SFX.poke(); say('Yumuşak. İğne bir şeye değmedi.'); }
-}
-
-function incision(it, point) {
-  const local = it.model.worldToLocal(point.clone());
-  const scar = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.004, 0.005), std(0x2a1408));
-  scar.position.copy(local);
-  scar.rotation.y = Math.random() * Math.PI;
-  it.model.add(scar);
-  SFX.cut();
-  say('Kesikte bir şey yok.');
-  maybeTrap(it);
-  propertyDamage(it, 'boş kesik');
-}
-
-// Neşter: pastada yalnızca saplandığı yeri açar; kaçağın tam üstüne gelirse eşya ayrılır.
-function cutItem(it, point) {
-  if (it.cut || it.busy) return;
-  if (it.def.precise && !rayNear(it.blob, 0.03)) { incision(it, point); return; }
-  it.cut = true;
-  SFX.cut();
-  maybeTrap(it);
+// Kaçak açığa çıkar: kendi yerinde belirir, hafifçe yükselir; cımbızla çekilmeyi bekler
+function revealContraband(it, fromWorld) {
   const cb = current.cb;
-  const hasPhysical = it.blob && it.blob.parent;
-  const res = it.def.cut(it.model, !!hasPhysical);
-  shadowAll(it.model);
-  for (const m of it.sigs) m.castShadow = false;
-  for (const { h, s } of res.halves) tween(h, new THREE.Vector3(s * res.spread, 0, 0), { dur: 0.35 });
-  if (it.inkMark && res.halves.length) { it.model.remove(it.inkMark); res.halves[0].h.add(it.inkMark); }
-  if (hasPhysical) {
-    const cdef = CONTRABAND[cb.type];
-    const cbObj = new THREE.Group();
-    cbObj.add(shadowAll(cdef.make()));
-    const hit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.07), new THREE.MeshBasicMaterial({ visible: false }));
-    cbObj.add(hit);
-    it.blob.getWorldPosition(cbObj.position);
-    it.model.remove(it.blob);
-    it.sigs = it.sigs.filter(m => m !== it.blob);
-    cbObj.visible = false;
-    scene.add(cbObj);
-    cb.found = true;
-    tween(cbObj, new THREE.Vector3(it.obj.position.x, cbObj.position.y + 0.05, it.obj.position.z), { dur: 0.4, delay: 0.35,
-      done: () => { SFX.aha(); say('Bir şey var! ' + cdef.name + (cb.ruined ? ' (mürekkebe bulanmış)' : '')); } });
-    current.items.push({ obj: cbObj, name: cdef.name, contraband: true, parent: it, inTray: false, inDrawer: false });
+  if (cb.found) return;
+  cb.found = true;
+  const cdef = CONTRABAND[cb.type];
+  const cbObj = new THREE.Group();
+  cbObj.add(shadowAll(cdef.make()));
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.09, 0.07), new THREE.MeshBasicMaterial({ visible: false }));
+  cbObj.add(hit);
+  cbObj.position.copy(fromWorld);
+  if (it.blob) { it.model.remove(it.blob); it.blob = null; }
+  scene.add(cbObj);
+  tween(cbObj, fromWorld.clone().add(new THREE.Vector3(0, 0.06, 0.02)), { dur: 0.45,
+    done: () => { SFX.aha(); say('Bir şey var! ' + cdef.name + ' · cımbızla (5) çek'); } });
+  current.items.push({ obj: cbObj, name: cdef.name, contraband: true, parent: it, inTray: false, inDrawer: false });
+}
+
+// ---- 1. gün: bıçakla dilimleme ----
+function sliceAt(it, j) {
+  const m = it.mech;
+  if (m.cuts.has(j)) { say('Orası zaten kesik.'); return; }
+  m.cuts.add(j);
+  jab('knife', 0.06);
+  // Her kesikte dilimler birbirinden biraz ayrılır
+  const cuts = [...m.cuts];
+  m.parts.forEach((p, i) => {
+    const before = cuts.filter(c => c <= i).length;
+    const off = SLICE_GAP * before - SLICE_GAP * cuts.length / 2;
+    tween(p, new THREE.Vector3(p.userData.baseX + off, p.position.y, p.position.z), { dur: 0.25 });
+  });
+  if (j === m.hideBoundary) {
+    SFX.clank();
+    say('TAK! Bıçak metale çarptı.');
+    revealContraband(it, it.model.localToWorld(it.model.userData.hidePos.clone()));
   } else {
-    setTimeout(() => say('İçi temiz.'), 400);
-    propertyDamage(it, 'temiz eşya kesildi');
+    SFX.slice();
+    if (m.hideBoundary > 0 && Math.abs(j - m.hideBoundary) === 1) say('Bıçak sert bir şeye sürtündü… hemen yanında.');
+    else say('Çıtır. Bir şey yok.');
+    if (!it.hidden) propertyDamage(it, 'temiz yiyecek dilimlendi');
+  }
+}
+// Sürüklenen bıçak çizgisinin ortasından geçen dilim sınırını bul
+const sliceRay = new THREE.Raycaster();
+function tryKnifeStroke(a, b) {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  if (Math.hypot(dx, dy) < 8) return;   // sürüklemeden tıklama: bıçak bir şey yapmaz
+  if (Math.abs(dy) < 30 || Math.abs(dy) < Math.abs(dx) * 0.8) { say('Bıçağı eşyanın üstünden aşağı doğru sürükle.'); return; }
+  // Çizgi boyunca örnekle: yiyeceğin üst yüzünden geçen noktaların ortalaması kesim yeridir
+  const hits = new Map();
+  const ndc = new THREE.Vector2(), p = new THREE.Vector3();
+  for (let k = 0; k <= 24; k++) {
+    const t = k / 24;
+    ndc.set(((a.x + dx * t) / innerWidth) * 2 - 1, -((a.y + dy * t) / innerHeight) * 2 + 1);
+    sliceRay.setFromCamera(ndc, camera);
+    for (const it of current.items) {
+      if (it.contraband || it.def.cls !== 'food' || it.onScale) continue;
+      const m = it.mech;
+      const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -(it.obj.position.y + m.top));
+      if (!sliceRay.ray.intersectPlane(plane, p)) continue;
+      const local = it.model.worldToLocal(p.clone());
+      if (Math.abs(local.x) > m.len / 2 || Math.abs(local.z) > 0.09) continue;
+      if (!hits.has(it)) hits.set(it, []);
+      hits.get(it).push(local.x);
+    }
+  }
+  let best = null;
+  for (const [it, xs] of hits) if (!best || xs.length > best[1].length) best = [it, xs];
+  if (!best) { say('Bıçak bir yiyeceğin üstünden geçmedi.'); return; }
+  const [it, xs] = best, m = it.mech;
+  const x = xs.reduce((u, v) => u + v, 0) / xs.length;
+  sliceAt(it, THREE.MathUtils.clamp(Math.round(x / m.segW + m.segs / 2), 1, m.segs - 1));
+}
+
+// ---- 2. gün: tornavidayla vida sökme ----
+function screwScreen(screw) {
+  const p = screw.getWorldPosition(new THREE.Vector3()).project(camera);
+  return { x: (p.x + 1) / 2 * innerWidth, y: (1 - p.y) / 2 * innerHeight };
+}
+function turnScrew(drag, px, py) {
+  const c = screwScreen(drag.screw);
+  const ddx = px - c.x, ddy = py - c.y;
+  if (Math.hypot(ddx, ddy) < 8) return;
+  const ang = Math.atan2(ddy, ddx);
+  if (drag.last === null) { drag.last = ang; return; }
+  let d = ang - drag.last;
+  if (d > Math.PI) d -= Math.PI * 2;
+  if (d < -Math.PI) d += Math.PI * 2;
+  drag.last = ang;
+  const st = drag.screw.userData.screw;
+  const before = Math.floor(st.turned / (Math.PI / 4));
+  st.turned += Math.abs(d);
+  drag.screw.rotation.y -= d;
+  drag.screw.position.y = 0.004 + 0.007 * Math.min(1, st.turned / SCREW_TURN);
+  if (Math.floor(st.turned / (Math.PI / 4)) > before) SFX.tick();
+  if (st.turned >= SCREW_TURN) { screwOut(drag.it, drag.screw); screwDrag = null; }
+}
+function screwOut(it, screw) {
+  const st = screw.userData.screw;
+  st.out = true;
+  SFX.screwOut();
+  tween(screw, screw.position.clone().add(new THREE.Vector3(0, 0.03, 0)), { dur: 0.25, done: () => { screw.visible = false; } });
+  const m = it.mech;
+  const left = m.screws.filter(s => !s.userData.screw.out).length;
+  if (left > 0) { say(`Vida çıktı. ${left} vida kaldı.`); return; }
+  m.open = true;
+  SFX.lid();
+  tween(m.cover, m.cover.position.clone().add(new THREE.Vector3(-0.02, 0.12, -0.12)), { dur: 0.5, done: () => { m.cover.visible = false; } });
+  if (!m.board) {
+    if (it.hidden) setTimeout(() => revealContraband(it, m.device.getWorldPosition(new THREE.Vector3())), 450), setTimeout(() => { m.device.visible = false; }, 460);
+    else say('Kapak açıldı. İçinde yalnız piller var.');
+  } else {
+    say(it.hidden ? 'Kapak açıldı. Kabloların arasında yabancı bir cihaz var. Kablosunu cımbızla (5) kopar.' : 'Kapak açıldı. Kablolar ve devre kartı.', 4000);
+    setTimeout(() => focusItem(it), 350);
+  }
+}
+// Kapak açılınca eşya göz hizasına kalkar: kablolar rahat seçilsin
+function focusItem(it, tilt = 0.75) {
+  if (it.focused || !current || !current.items.includes(it)) return;
+  if (it.onScale) { it.onScale = false; scaleItem = null; scaleTarget = 0; }
+  it.focused = tilt;
+  const dir = lookTarget.clone().sub(CAM_BASE).normalize();
+  const pos = CAM_BASE.clone().addScaledVector(dir, 0.6);
+  pos.y -= 0.06;
+  tween(it.obj, pos, { dur: 0.5, arc: 0.04 });
+  animate(0.5, k => { it.obj.rotation.x = tilt * ease(k); });
+}
+function unfocusItem(it) {
+  if (!it.focused) return;
+  const tilt = it.focused;
+  it.focused = false;
+  it.busy = true;
+  tween(it.obj, it.slot, { dur: 0.45, arc: 0.06, done: () => { it.busy = false; } });
+  animate(0.45, k => { it.obj.rotation.x = tilt * (1 - ease(k)); });
+}
+// Kablo cımbızla koparılır: cihaza giden doğru kablo cihazı serbest bırakır, yanlışı eşyayı bozar
+function snipWire(it, wire) {
+  const w = wire.userData.wire;
+  wire.parent.remove(wire);
+  it.mech.wires = it.mech.wires.filter(x => x !== wire);
+  SFX.snip();
+  jab('tweezers');
+  if (w.toDevice) {
+    say(`${w.color[0].toUpperCase() + w.color.slice(1)} kablo koptu. Cihaz serbest.`);
+    const pos = it.mech.device.getWorldPosition(new THREE.Vector3());
+    it.mech.device.visible = false;
+    revealContraband(it, pos);
+  } else {
+    say(`Yanlış kablo! ${it.name} bozuldu.`);
+    propertyDamage(it, `${w.color} kablo koparıldı`);
   }
 }
 
-// Kaçağı çek: çekmece açıksa gizlice çekmeceye, değilse (yalnız cımbızla) delil tepsisine
+// ---- 3. gün: dikiş sökme ----
+function popStitch(it, st) {
+  const m = it.mech;
+  m.stitches = m.stitches.filter(s => s !== st);
+  SFX.stitch();
+  jab('ripper', 0.03);
+  const to = st.position.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.04, 0.04, 0.03));
+  tween(st, to, { dur: 0.3, done: () => st.parent && st.parent.remove(st) });
+  if (m.stitches.length) return;
+  m.open = true;
+  animate(0.5, k => m.flapOpen(ease(k)));
+  if (m.stuffing > 0) say('Dikiş açıldı. Pamuğu elle (1) boşalt.');
+  else setTimeout(() => finishSeam(it), 500);
+}
+function unstuff(it) {
+  const m = it.mech;
+  m.stuffing--;
+  SFX.puff();
+  const base = it.model.localToWorld(it.model.userData.hidePos.clone());
+  for (let i = 0; i < 4; i++) {
+    const p = new THREE.Mesh(new THREE.SphereGeometry(0.008 + Math.random() * 0.006, 8, 6), std(0xeeeae0, { roughness: 1 }));
+    p.position.copy(base);
+    scene.add(p);
+    tween(p, base.clone().add(new THREE.Vector3((Math.random() - 0.5) * 0.12, -0.02 - Math.random() * 0.02, 0.05 + Math.random() * 0.06)).setY(DESK_TOP + 0.008),
+      { dur: 0.4, arc: 0.05, done: () => setTimeout(() => scene.remove(p), 6000) });
+  }
+  if (m.stuffing > 0) say(`Pamuk çıkıyor… (${m.stuffing})`);
+  else finishSeam(it);
+}
+function finishSeam(it) {
+  if (it.hidden) revealContraband(it, it.model.localToWorld(it.model.userData.hidePos.clone()));
+  else { say('İçi boş. Temiz eşyanın dikişi söküldü.'); propertyDamage(it, 'temiz dikiş söküldü'); setTimeout(() => unfocusItem(it), 1500); }
+}
+
+// Kaçağı çek: çekmece açıksa gizlice çekmeceye, değilse delil tepsisine
 function extract(cbItem, toDrawer) {
   if (cbItem.inTray || cbItem.inDrawer) return;
   const cb = current.cb;
   cbItem.parent.extracted = true;
+  if (cbItem.parent.focused) setTimeout(() => unfocusItem(cbItem.parent), 500);
   if (cbItem.parent.onScale) scaleTarget = weightOf(cbItem.parent);
   SFX.pick();
+  jab('tweezers');
   if (toDrawer) {
     cbItem.inDrawer = true; cb.inDrawer = true;
     const slotIdx = drawerSlots.length;
@@ -1923,6 +2206,7 @@ function scrapeSeal() {
   if (c.scraped) { say('Bu mühürden numune zaten alındı.'); return; }
   c.scraped = true;
   SFX.scrape();
+  jab('spatula');
   c.seal.children[0].scale.set(0.8, 1, 0.8);
   c.seal.children[1].visible = false;
   const chip = new THREE.Mesh(new THREE.BoxGeometry(0.012, 0.004, 0.009), std(0x8e1b16));
@@ -1931,7 +2215,7 @@ function scrapeSeal() {
   tween(chip, DISH_POS.clone().add(new THREE.Vector3(0, 0.006, 0)), { dur: 0.6, arc: 0.1, done: () => {
     scene.remove(chip);
     dishChip.visible = true; dishLiquid.visible = false;
-    say('Numune kapta. Şimdi asit (7) damlat.');
+    say('Numune kapta. Şimdi asit (8) damlat.');
   } });
 }
 
@@ -1940,6 +2224,7 @@ function dropReagent(target) {
   reagentDrops--;
   drawReagentLabel();
   SFX.drip();
+  jab('reagent', 0.02);
   const drop = new THREE.Mesh(new THREE.SphereGeometry(0.004, 8, 6), std(0x9a7a4a, { roughness: 0.1 }));
   const from = target === 'dish' ? DISH_POS.clone().add(new THREE.Vector3(0, 0.12, 0)) : target.obj.position.clone().add(new THREE.Vector3(0, 0.12, 0));
   drop.position.copy(from);
@@ -1955,12 +2240,11 @@ function dropReagent(target) {
     animate(0.9, k => dishLiquid.material.color.lerpColors(new THREE.Color(0x888888), to, k),
       () => say(valid ? 'MAVİ: mühür gerçek.' : 'KIRMIZI: mühür sahte! Paket kurcalanmış.', 3500));
   } else {
-    const organic = CONTRABAND[current.cb.type].category === 'ORGANIK';
+    const organic = CONTRABAND[current.cb.type].organic;
     setTimeout(() => say(organic ? 'Koyu kırmızıya döndü: uyuşturucu.' : 'Tepkime yok. Asit israf oldu.'), 500);
   }
 }
 
-// Sahte onay damgası: manifestonun ön yüzüne, tıklanan yere
 function stampManifest(hit) {
   const c = current;
   if (!c || (c.state !== 'desk' && c.state !== 'open')) { say('Önce paketi masaya al.'); return; }
@@ -1971,7 +2255,7 @@ function stampManifest(hit) {
   c.stamp = { x, y, rot: (Math.random() - 0.5) * 0.3 };
   drawManifest(c.s, c.stamp);
   SFX.stamp();
-  animate(0.3, k => { held.forged.position.y = -0.14 - Math.sin(k * Math.PI) * 0.05; });
+  jab('forged', 0.05);
 }
 
 function pullLever(lever) {
@@ -1982,14 +2266,10 @@ function pullLever(lever) {
 // ---------- Müfettiş baskını ----------
 let raid = null, raidsDone = 0;
 function maybeScheduleRaid() {
-  // Her açılan pakette olasılıkla; 5. paketten sonra hâlâ baskın olmadıysa kesin
-  const forced = raidsDone === 0 && shipmentIndex >= 5;
+  const forced = raidsDone === 0 && shipmentIndex >= SHIPMENTS.length - 1;   // günün son paketlerinde hâlâ baskın yoksa kesin
   if (forced || Math.random() < RAID_CHANCE) current.raidAt = 3 + Math.random() * 5;
 }
-function startRaid() {
-  raid = { t: RAID_TIME, beep: RAID_TIME + 1 };
-  raidsDone++;
-}
+function startRaid() { raid = { t: RAID_TIME, beep: RAID_TIME + 1 }; raidsDone++; }
 function raidFindings() {
   const f = [];
   if (drawerOpen > 0.15) f.push('çekmece açık');
@@ -2018,20 +2298,18 @@ function endRaid() {
 // Saf fonksiyon: paket, kaçağın durumu, kol ve sahte onay → sonuç (test için dışarıya açık)
 function evaluate(s, cb, action, forgedStampApplied) {
   const out = { credit: 0, susp: 0, riot: 0, trust: { RED_CELLS: 0, BLACK_CROWN: 0 }, kind: '', title: '', detail: '', whisper: '' };
-  const present = cb.exists && !cb.inTray && !cb.inDrawer;   // kaçak hâlâ paketin içinde
-  const logged = cb.exists && cb.inTray;                      // delil tepsisinde
+  const present = cb.exists && !cb.inTray && !cb.inDrawer;
+  const logged = cb.exists && cb.inTray;
   const f = s.resistanceNote.targetFaction;
   const hasFaction = f === 'RED_CELLS' || f === 'BLACK_CROWN';
   if (action === 'GREEN') {
     if (present && s.isResistancePackage) {
-      // DURUM A: direniş paketi içeri sızdı
       out.riot = RIOT_PER_LEAK;
       if (hasFaction) out.trust[f] = 15;
       out.whisper = `${FACTION_NAME[f]}: paket ${s.prisonerId} hücresine ulaştı. İsyan yaklaşıyor.`;
       if (forgedStampApplied) { out.susp = SUSP_FORGED_LEAK; out.kind = 'leak'; out.title = 'SIZDIRMA BAŞARILI'; out.detail = 'İdare fark etmedi.'; }
       else { out.susp = SUSP_RAW_LEAK; out.kind = 'risky'; out.title = 'RİSKLİ SIZDIRMA'; out.detail = 'Onaysız paket geçti. İdare şüphe duyuyor!'; }
     } else if (present) {
-      // Direnişin olmayan kaçak geçti: idare adına hata
       out.credit = -FINE_ERROR; out.susp = SUSP_ERROR; out.kind = 'error';
       out.title = 'KAÇAK GEÇTİ'; out.detail = `${s.illegalText} Paket ${s.no}.`;
     } else {
@@ -2040,12 +2318,10 @@ function evaluate(s, cb, action, forgedStampApplied) {
     }
   } else {
     if (present || logged) {
-      // DURUM B: sadık memur
-      out.credit = cb.ruined ? PAY_RUINED : PAY_CORRECT; out.susp = SUSP_LOYAL; out.kind = 'loyal';
+      out.credit = PAY_CORRECT; out.susp = SUSP_LOYAL; out.kind = 'loyal';
       if (s.isResistancePackage && hasFaction) out.trust[f] = -10;
-      out.title = 'GÜVEN KAZANILDI'; out.detail = `Sadık personel primi. ${s.illegalText}` + (cb.ruined ? ' Delil hasarlı, prim yarım.' : '');
+      out.title = 'GÜVEN KAZANILDI'; out.detail = `Sadık personel primi. ${s.illegalText}`;
     } else {
-      // Temiz görünen pakete el koymak (kaçağı çekmeceye alınmış paket de temiz görünür)
       out.credit = -FINE_WRONG_SEIZE; out.susp = SUSP_WRONG_SEIZE; out.kind = 'unjust';
       out.title = 'HAKSIZ EL KOYMA'; out.detail = `Paket ${s.no} temizdi.`;
     }
@@ -2080,21 +2356,17 @@ function decide(verdict) {
   scaleItem = null; scaleTarget = 0;
   trayCount = 0;
   dishChip.visible = false; dishLiquid.visible = false;
-  // Kaldırılmış kutu yerine konur
   c.mesh.rotation.x = 0; c.mesh.position.y = DESK_TOP;
-
   const top = DESK_SPOT.clone(); top.y += c.mesh.userData.top;
   c.items.forEach((it, i) => {
     if (it.inTray) tween(it.obj, it.obj.position.clone().add(new THREE.Vector3(0, -0.08, 0)), { dur: 0.4, delay: 0.3, done: () => scene.remove(it.obj) });
     else tween(it.obj, top, { dur: 0.35, arc: 0.08, delay: i * 0.06, done: () => scene.remove(it.obj) });
   });
-
   const next = () => { if (!checkEnd()) setTimeout(spawnNext, 900); };
   const dispatch = action === 'GREEN'
     ? () => tween(c.mesh, new THREE.Vector3(INSPECT_X, BELT_Y, BELT_Z), { dur: 0.7, arc: 0.18,
         done: () => { c.state = 'outgoing'; outgoing.push(c); next(); } })
     : () => crush(c.mesh, next);
-
   const lid = c.mesh.userData.lid;
   if (lid.visible && lid.position.y === lid.userData.homeY) dispatch();
   else {
@@ -2103,7 +2375,6 @@ function decide(verdict) {
   }
 }
 
-// Kırmızı kol: paket prese gider, ezilir, kapak açılır, bacaya düşer
 function crush(mesh, done) {
   const plateY = BIN_POS.y + 0.71;
   const h = mesh.userData.top + 0.04;
@@ -2129,10 +2400,33 @@ function crush(mesh, done) {
   } });
 }
 
-// ---------- Sonlar ----------
+// ---------- Günler ve sonlar ----------
 const overlay = document.getElementById('overlay');
 const alarmEl = document.getElementById('alarm');
 let alarmOn = false;
+const DAY_LENGTH = 300; // saniye
+let lightLeft = DAY_LENGTH;
+
+function startDay(i) {
+  dayIndex = i;
+  SHIPMENTS = DAYS[i].shipments;
+  shipmentIndex = 0; processed = 0; results.length = 0; raidsDone = 0; raid = null;
+  lightLeft = DAY_LENGTH;
+  current = null;
+  busyEnding = false; dayOver = false;
+  overlay.hidden = true;
+  document.body.classList.add('playing');
+  cursorEl.hidden = false;
+  setTool('hand');
+  drawRules();
+  refreshRack();
+  drawManifest(null);
+  const d = DAYS[i];
+  printReceipt('VARDİYA', `Gün ${d.n} başladı. Yeni alet: ${d.toolName}.`, 0);
+  say(`GÜN ${d.n} · Yeni alet: ${d.toolName} (${TOOLS[d.tool].key}) — ${d.toolLine}`, 6500);
+  spawnNext();
+}
+
 function checkEnd() {
   if (dayOver || busyEnding) return true;
   if (suspicion >= 100) {
@@ -2156,43 +2450,62 @@ function checkEnd() {
 function endShift(reason) {
   if (dayOver || busyEnding) return;
   busyEnding = true;
-  const delivered = [];
-  for (const d of drawerSlots) {
+  const delivered = drawerSlots.splice(0);
+  for (const d of delivered) {
     if (d.resistance) {
       riot = Math.min(100, riot + RIOT_PER_DRAWER);
       if (trust[d.faction] !== undefined) trust[d.faction] += 10;
     }
-    delivered.push(d);
+    if (d.obj.parent) d.obj.parent.remove(d.obj);
   }
   drawTally();
   if (riot >= 100) { alarmOn = true; SFX.siren(); setTimeout(() => showEnding('riot', delivered), 3200); }
-  else showEnding(reason, delivered);
+  else if (dayIndex < DAYS.length - 1) showDayEnd(reason, delivered);
+  else showEnding('final', delivered);
 }
 
+const CLS = { leak: 'amb', risky: 'amb', loyal: 'ok', clean: 'ok', error: 'no', unjust: 'no' };
+function summaryHtml(delivered) {
+  const rows = results.map(({ s, action, r }) =>
+    `<li class="${CLS[r.kind]}">${s.no} · ${action === 'GREEN' ? 'YEŞİL' : 'KIRMIZI'} · ${r.title} · kr ${r.credit >= 0 ? '+' : ''}${r.credit} · şüphe ${r.susp >= 0 ? '+' : ''}${r.susp}${r.riot ? ' · isyan +' + r.riot : ''}</li>`).join('');
+  const drawerRows = delivered.map(d => `<li class="amb">Çekmece: ${CONTRABAND[d.type].name} — ${d.resistance ? 'gece direnişe teslim edildi' : 'kimse almadı'}</li>`).join('');
+  return `<div>Şüphe: <b class="${suspicion >= 70 ? 'no' : 'ok'}">%${suspicion}</b> · İsyan: <b class="amb">%${riot}</b> · Bakiye: <b>${credits} kr</b></div>
+    <div>Kızıl Hücreler ${trust.RED_CELLS} · Kara Taç ${trust.BLACK_CROWN} · Bugünkü baskın: ${raidsDone}</div>
+    <ul>${rows}${drawerRows}</ul>`;
+}
+function showDayEnd(reason, delivered) {
+  dayOver = true;
+  scanning = false;
+  document.body.classList.remove('playing');
+  cursorEl.hidden = true;
+  const d = DAYS[dayIndex], nx = DAYS[dayIndex + 1];
+  overlay.innerHTML = `<div class="card">
+    <h2>${reason === 'dark' ? 'JENERATÖR SUSTU · ' : ''}GÜN ${d.n} BİTTİ</h2>
+    ${summaryHtml(delivered)}
+    <p>Gardiyan seni hücrene götürüyor. Gece şüphe biraz dağılır (%${SUSP_OVERNIGHT}).</p>
+    <p class="amb">Yarın masada yeni bir alet olacak: <b>${nx.toolName} (${TOOLS[nx.tool].key})</b> — ${nx.toolLine}</p>
+    <button id="next">Gün ${nx.n}'e başla</button></div>`;
+  overlay.hidden = false;
+  document.getElementById('next').addEventListener('click', () => { setSuspicion(suspicion + SUSP_OVERNIGHT); startDay(dayIndex + 1); });
+}
 function showEnding(kind, delivered = []) {
   if (dayOver) return;
   dayOver = true;
   scanning = false;
   document.body.classList.remove('playing');
   cursorEl.hidden = true;
-  const title = { exposed: 'DEŞİFRE OLDUN', riot: 'İSYAN BAŞLADI', dark: 'JENERATÖR SUSTU', done: 'VARDİYA BİTTİ' }[kind];
+  const title = { exposed: 'DEŞİFRE OLDUN', riot: 'İSYAN BAŞLADI', final: 'ÜÇÜNCÜ GÜN BİTTİ' }[kind];
   const verdict = {
     exposed: '<div class="no">Hücrene götürülüp infaz edildin.</div>',
     riot: '<div class="amb">Hapishane kapıları içeriden kırıldı! Kızıl Hücreler koridorları, Kara Taç kapıları tuttu. Sen de koşanların arasındaydın.</div>',
-    dark: `<div class="ok">Işıklar söndü. Şüphe %${suspicion}. Yarın yine bu masadasın.</div>`,
-    done: `<div class="ok">Vardiya bitti. Şüphe %${suspicion}. Yarın yine bu masadasın.</div>`,
+    final: `<div class="ok">Üç gün boyunca masada kaldın. Şüphe %${suspicion}, isyan %${riot}. (Prototip burada bitiyor; 4. gün UV fener ve kimyasal solüsyonla gelecek.)</div>`,
   }[kind];
-  const CLS = { leak: 'amb', risky: 'amb', loyal: 'ok', clean: 'ok', error: 'no', unjust: 'no' };
-  const rows = results.map(({ s, action, r }) =>
-    `<li class="${CLS[r.kind]}">${s.no} · ${action === 'GREEN' ? 'YEŞİL' : 'KIRMIZI'} · ${r.title} · kr ${r.credit >= 0 ? '+' : ''}${r.credit} · şüphe ${r.susp >= 0 ? '+' : ''}${r.susp}${r.riot ? ' · isyan +' + r.riot : ''}</li>`).join('');
-  const drawerRows = delivered.map(d => `<li class="amb">Çekmece: ${CONTRABAND[d.type].name} — ${d.resistance ? 'gece direnişe teslim edildi' : 'kimse almadı'}</li>`).join('');
   overlay.innerHTML = `<div class="card">
     <h2>${title}</h2>
-    <div>Şüphe: <b class="${suspicion >= 70 ? 'no' : 'ok'}">%${suspicion}</b> · İsyan: <b class="amb">%${riot}</b> · Bakiye: <b>${credits} kr</b></div>
-    <div>Kızıl Hücreler ${trust.RED_CELLS} · Kara Taç ${trust.BLACK_CROWN} · Baskın: ${raidsDone}</div>
-    <ul>${rows}${drawerRows}</ul>
+    <div class="amb">Gün ${DAYS[dayIndex].n}</div>
+    ${summaryHtml(delivered)}
     ${verdict}
-    <button id="restart">Günü baştan oyna</button></div>`;
+    <button id="restart">Baştan oyna</button></div>`;
   overlay.hidden = false;
   document.getElementById('restart').addEventListener('click', () => location.reload());
 }
@@ -2202,6 +2515,20 @@ const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let mousePx = { x: innerWidth / 2, y: innerHeight / 2 };
 const cursorEl = document.getElementById('cursor');
+// Bıçak çizgisi için ince bir katman
+const strokeCanvas = document.createElement('canvas');
+strokeCanvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none';
+document.getElementById('hud').appendChild(strokeCanvas);
+let knifeDrag = null, screwDrag = null;
+function drawStroke() {
+  if (strokeCanvas.width !== innerWidth) { strokeCanvas.width = innerWidth; strokeCanvas.height = innerHeight; }
+  const x = strokeCanvas.getContext('2d');
+  x.clearRect(0, 0, strokeCanvas.width, strokeCanvas.height);
+  if (!knifeDrag) return;
+  x.strokeStyle = 'rgba(240,230,200,.8)'; x.lineWidth = 2; x.setLineDash([8, 6]);
+  x.beginPath(); x.moveTo(knifeDrag.a.x, knifeDrag.a.y); x.lineTo(mousePx.x, mousePx.y); x.stroke();
+}
+
 renderer.domElement.addEventListener('pointermove', e => {
   mouse.x = (e.clientX / innerWidth) * 2 - 1;
   mouse.y = -(e.clientY / innerHeight) * 2 + 1;
@@ -2211,24 +2538,26 @@ renderer.domElement.addEventListener('pointermove', e => {
     drawerOpen = drawerTarget = THREE.MathUtils.clamp(drawerDrag.open0 + (e.clientY - drawerDrag.y) / 160, 0, 1);
     if (Math.abs(e.clientY - drawerDrag.y) > 4) drawerDrag.moved = true;
   }
+  if (screwDrag) turnScrew(screwDrag, e.clientX, e.clientY);
+  if (knifeDrag) drawStroke();
 });
 
-document.getElementById('start').addEventListener('click', () => {
+function beginGame(i) {
   audio();
-  overlay.hidden = true;
   started = true;
-  document.body.classList.add('playing');
-  cursorEl.hidden = false;
-  printReceipt('VARDİYA', 'Gün 1 başladı. Masanızı temiz tutunuz.', 0);
-  spawnNext();
-});
+  startDay(i);
+}
+document.getElementById('start').addEventListener('click', () => beginGame(0));
+document.querySelectorAll('[data-day]').forEach(b => b.addEventListener('click', () => beginGame(+b.dataset.day)));
 
 let tool = 'hand';
 function setTool(t) {
   if (t === tool && t !== 'hand') t = 'hand';
-  if (t === 'forged' && drawerTarget < 0.5) setDrawer(true);   // sahte damga çekmecede: çekmece gıcırdayarak açılır
+  if (TOOLS[t].day && !toolUnlocked(t)) { say(`${TOOLS[t].name} ${TOOLS[t].day}. günden itibaren masada.`); return; }
+  if (t === 'forged' && drawerTarget < 0.5) setDrawer(true);
   tool = t;
-  for (const [k, m] of Object.entries(rackTools)) m.visible = k !== tool;
+  for (const [k, m] of Object.entries(rackTools)) if (!TOOLS[k].day) m.visible = k !== tool;
+  refreshRack();
   if (tool !== 'hand') SFX.pick();
 }
 function toggleBook(open = !bookOpen) {
@@ -2251,7 +2580,6 @@ addEventListener('keydown', e => {
     return;
   }
   if (k === 'b') { toggleBook(true); return; }
-  if (k === 'r') wiping = true;
   if (k === 'f' && !e.repeat) {
     if (fuseT > 0) say('Sigorta attı. Tarayıcı soğuyor.');
     else { scanning = true; SFX.scan(); }
@@ -2259,13 +2587,8 @@ addEventListener('keydown', e => {
   for (const [t, v] of Object.entries(TOOLS)) if (e.key === v.key) setTool(t);
   if (k === 'escape') setTool('hand');
 });
-addEventListener('keyup', e => {
-  const k = e.key.toLowerCase();
-  if (k === 'r') wiping = false;
-  if (k === 'f') scanning = false;
-});
+addEventListener('keyup', e => { if (e.key.toLowerCase() === 'f') scanning = false; });
 
-// Sağ tık basılı: eğil, yakından bak · Sol tık basılı çekmecede: sürükle
 let leaning = false, leanK = 0;
 const leanPoint = new THREE.Vector3();
 const deskPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -DESK_TOP);
@@ -2285,21 +2608,34 @@ renderer.domElement.addEventListener('pointerdown', e => {
   }
   if (e.button !== 0) return;
   const h = hoverTarget();
-  if (h && h.id === 'drawer') drawerDrag = { y: e.clientY, open0: drawerOpen, moved: false };
+  if (h && h.id === 'drawer') { drawerDrag = { y: e.clientY, open0: drawerOpen, moved: false }; return; }
+  if (tool === 'screwdriver' && h && h.id === 'screw') { screwDrag = { it: h.it, screw: h.screw, last: null }; jab('screwdriver', 0.02); return; }
+  if (tool === 'knife' && current && current.state === 'open' && (!h || h.id === 'item' || h.id === 'package')) {
+    knifeDrag = { a: { x: e.clientX, y: e.clientY } };
+  }
 });
 addEventListener('pointerup', e => {
   if (e.button === 2) leaning = false;
-  if (e.button === 0 && drawerDrag) {
+  if (e.button !== 0) return;
+  if (drawerDrag) {
     const wasOpen = drawerDrag.open0 > 0.5;
     if (!drawerDrag.moved) setDrawer(!wasOpen);
     else { drawerTarget = drawerOpen > 0.5 ? 1 : 0; if ((drawerTarget > 0.5) !== wasOpen) SFX.creak(); }
     drawerDrag = null;
   }
+  if (screwDrag) screwDrag = null;
+  if (knifeDrag) {
+    const a = knifeDrag.a;
+    knifeDrag = null;
+    drawStroke();
+    if (current && current.state === 'open') tryKnifeStroke(a, { x: e.clientX, y: e.clientY });
+  }
 });
-addEventListener('blur', () => { scanning = false; leaning = false; wiping = false; drawerDrag = null; });
+addEventListener('blur', () => { scanning = false; leaning = false; drawerDrag = null; screwDrag = null; knifeDrag = null; });
 
 const PACKAGE_HINT = { incoming: 'bantta geliyor', belt: 'tıkla: masaya al', toDesk: '', desk: 'tıkla: aç', opening: 'açılıyor…' };
 const canDecide = () => current && (current.state === 'desk' || current.state === 'open');
+const classTool = it => CLASS_TOOL[it.def.cls];
 
 function packageHint() {
   const c = current;
@@ -2322,12 +2658,20 @@ function itemHint(it) {
     if (tool === 'tweezers') return `KAÇAK: ${it.name} — tıkla: ${drawerOpen > 0.7 ? 'çekmeceye sakla' : 'delil tepsisine koy'}`;
     if (tool === 'reagent') return `KAÇAK: ${it.name} — tıkla: asit damlat`;
     if (tool === 'hand' && drawerOpen > 0.7) return `KAÇAK: ${it.name} — tıkla: çekmeceye at`;
-    return `KAÇAK: ${it.name} — cımbız gerek (4)`;
+    return `KAÇAK: ${it.name} — cımbız gerek (5)`;
   }
-  if (scanning && it.inkMark && current.cb.found) return `Gizli yazı: "${current.cb.text.join(' ')}"`;
-  if (tool === 'needle') return it.def.probe ? `${it.name} — tıkla: iğneyle yokla (${it.pins}/6)` : `${it.name} — iğne geçmez`;
-  if (tool === 'knife') return it.cut ? `${it.name} — kesildi` : `${it.name} — tıkla: kes (temizse ${FINE_DAMAGE} kr ceza)`;
-  if (tool === 'hand') return it.onScale ? `${it.name} — terazide · tıkla: geri al` : `${it.name} — tıkla: teraziye koy`;
+  const m = it.mech, ct = classTool(it);
+  if (tool === 'hand') {
+    if (m.kind === 'seam' && m.open && m.stuffing > 0) return `${it.name} — tıkla: pamuğu çıkar (${m.stuffing})`;
+    return it.onScale ? `${it.name} — terazide · tıkla: geri al` : `${it.name} — tıkla: teraziye koy`;
+  }
+  if (TOOLS[tool].cls) {
+    if (tool !== ct) return `${it.name} — ${TOOLS[tool].name} buna işlemez (${CLASS_NAME[it.def.cls]}: ${TOOLS[ct].name})`;
+    if (m.kind === 'slice') return `${it.name} — sol tuş basılı, üstünden aşağı sürükle: dilimle`;
+    if (m.kind === 'screw') return m.open ? `${it.name} — kapak açık` : `${it.name} — vidanın üstünde basılı tut, etrafında daire çiz`;
+    if (m.kind === 'seam') return m.open ? `${it.name} — dikiş açık` : it.focused ? `${it.name} — dikişlere tek tek tıkla (${m.stitches.length}/7)` : `${it.name} — tıkla: yakına al, dikişi incele`;
+  }
+  if (tool === 'tweezers' && m.kind === 'screw' && m.open && m.device && m.device.visible) return `${it.name} — yabancı cihaz: önce kablosunu kopar`;
   return it.name;
 }
 
@@ -2339,10 +2683,10 @@ function hoverTarget() {
     { obj: scaleGroup, id: 'scale', text: 'Terazi' },
     { obj: tray, id: 'tray', text: 'Delil tepsisi' },
     { obj: manifest.mesh, id: 'manifest', read: true, text: manifestHint() },
-    { obj: rules.mesh, id: 'paper', read: true, text: 'Günün genelgesi — sağ tık basılı: yakından oku' },
+    { obj: rules.mesh, id: 'paper', read: true, text: `Gün ${DAYS[dayIndex].n} genelgesi — sağ tık basılı: yakından oku` },
     { obj: printer, id: 'printer', text: 'Makbuz yazıcısı' },
     { obj: genGauge, id: 'gauge', read: true, text: 'Jeneratör yakıt göstergesi' },
-    { obj: suspGauge, id: 'susp', read: true, text: `Lambadaki paslı ibre — idarenin şüphesi (GÜVENLİ → DEŞİFRE)` },
+    { obj: suspGauge, id: 'susp', read: true, text: 'Lambadaki paslı ibre — idarenin şüphesi (GÜVENLİ → DEŞİFRE)' },
     { obj: raidLamp, id: 'raidLamp', text: 'Müfettiş uyarı lambası' },
     { obj: dish, id: 'dish', text: tool === 'reagent' ? `Test kabı — tıkla: asit damlat (${reagentDrops} damla)` : 'Mühür test kabı' },
     { obj: bookDesk, id: 'book', read: true, text: 'Denetçi El Kitabı — tıkla ya da B: aç' },
@@ -2354,20 +2698,33 @@ function hoverTarget() {
     if (!m.visible || (k === 'forged' && drawerOpen < 0.5)) continue;
     list.push({ obj: m, id: 'rack', tool: k, text: `${TOOLS[k].name} (${TOOLS[k].key}) — tıkla: al` });
   }
+  for (const [k, p] of Object.entries(lockPlates)) if (p.visible) list.push({ obj: p, id: 'locked', text: `${TOOLS[k].name}: ${TOOLS[k].day}. günden itibaren` });
   if (current) {
     list.push({ obj: current.mesh, id: 'package', read: current.tilted, text: packageHint() });
-    if (canDecide() && !current.tilted) list.push({ obj: current.seal, id: 'seal', text: tool === 'spatula' ? (current.scraped ? 'Mühür — numune alındı' : 'Mum mühür — tıkla: numune kazı') : 'Resmî mum mühür — spatula (5) ile numune al' });
-    for (const it of current.items) if (it.obj.visible) list.push({ obj: it.obj, id: it.contraband ? 'contraband' : 'item', it });
+    if (canDecide() && !current.tilted) list.push({ obj: current.seal, id: 'seal', text: tool === 'spatula' ? (current.scraped ? 'Mühür — numune alındı' : 'Mum mühür — tıkla: numune kazı') : 'Resmî mum mühür — spatula (7) ile numune al' });
+    for (const it of current.items) {
+      if (!it.obj.visible) continue;
+      if (it.contraband) { list.push({ obj: it.obj, id: 'contraband', it }); continue; }
+      list.push({ obj: it.obj, id: 'item', it });
+      const m = it.mech;
+      if (m.kind === 'screw' && !m.open) for (const s of m.screws) if (!s.userData.screw.out) list.push({ obj: s, id: 'screw', it, screw: s,
+        text: tool === 'screwdriver' ? `Vida — basılı tut, etrafında daire çiz (%${Math.round(s.userData.screw.turned / SCREW_TURN * 100)})` : 'Vida — tornavida gerek (3)' });
+      if (m.kind === 'screw' && m.open) for (const w of m.wires) list.push({ obj: w, id: 'wire', it,
+        text: tool === 'tweezers' ? `${w.userData.wire.color[0].toUpperCase() + w.userData.wire.color.slice(1)} kablo — tıkla: kopar` : `${w.userData.wire.color[0].toUpperCase() + w.userData.wire.color.slice(1)} kablo — cımbızla (5) koparılır` });
+      if (m.kind === 'seam' && !m.open) for (const s of m.stitches) list.push({ obj: s, id: 'stitch', it, stitch: s,
+        text: tool === 'ripper' ? (it.focused ? `Dikiş — tıkla: sök (${m.stitches.length}/7)` : `${it.name} — tıkla: yakına al, dikişi incele`) : (it.data.roughStitch ? 'Kaba, düzensiz dikiş — dikiş sökücü gerek (4)' : 'Düzgün dikiş — dikiş sökücü gerek (4)') });
+    }
   }
-  // Öncelik: bulunan kaçak ve mühür, içinden çıktıkları nesnenin önüne geçer
+  // Öncelik: kaçak, mühür, vida, kablo ve dikiş, üstünde durdukları nesnenin önüne geçer
+  const PRIORITY = ['contraband', 'seal', 'screw', 'wire', 'stitch'];
   let best = null, bestD = Infinity;
   for (const h of list) {
     const hit = raycaster.intersectObject(h.obj, true)[0];
     if (!hit) continue;
-    const d = (h.id === 'contraband' || h.id === 'seal') ? hit.distance - 1 : hit.distance;
+    const d = PRIORITY.includes(h.id) ? hit.distance - 1 : hit.distance;
     if (d < bestD) { best = h; bestD = d; best.point = hit.point; best.uv = hit.uv; }
   }
-  if (best && best.it) best.text = itemHint(best.it);
+  if (best && (best.id === 'item' || best.id === 'contraband')) best.text = itemHint(best.it);
   return best;
 }
 
@@ -2377,6 +2734,7 @@ renderer.domElement.addEventListener('click', () => {
   const h = hoverTarget();
   if (!h) return;
   if (h.id === 'rack') setTool(h.tool);
+  else if (h.id === 'locked') say(h.text);
   else if (h.id === 'book') toggleBook(true);
   else if (h.id === 'package' && current) {
     if (current.state === 'belt') bringToDesk();
@@ -2391,15 +2749,26 @@ renderer.domElement.addEventListener('click', () => {
     else if (tool === 'hand' && current && current.state !== 'incoming') flipManifest();
   } else if (h.id === 'dish') {
     if (tool === 'reagent') dropReagent('dish');
+  } else if (h.id === 'screw') {
+    if (tool !== 'screwdriver') say('Vidayı sökmek için tornavida (3) gerek.');
+  } else if (h.id === 'wire') {
+    if (tool === 'tweezers') snipWire(h.it, h.obj);
+    else say('Kabloyu cımbızla (5) koparırsın.');
+  } else if (h.id === 'stitch') {
+    if (tool === 'ripper') { if (h.it.focused) popStitch(h.it, h.stitch); else focusItem(h.it, 0.35); }
+    else say('Dikişi sökmek için dikiş sökücü (4) gerek.');
   } else if (h.id === 'item') {
-    if (tool === 'hand') toggleScale(h.it);
-    else if (tool === 'needle') probe(h.it, h.point);
-    else if (tool === 'knife') cutItem(h.it, h.point);
+    const it = h.it, m = it.mech;
+    if (tool === 'hand') {
+      if (m.kind === 'seam' && m.open && m.stuffing > 0) unstuff(it);
+      else toggleScale(it);
+    } else if (tool === 'ripper' && m.kind === 'seam' && !m.open && !it.focused) focusItem(it, 0.35);
+    else if (TOOLS[tool].cls && tool !== classTool(it)) say(`${TOOLS[tool].name} buna işlemez. ${it.name} bir ${CLASS_NAME[it.def.cls]}: ${TOOLS[classTool(it)].name} gerek.`);
   } else if (h.id === 'contraband') {
     if (tool === 'tweezers') extract(h.it, drawerOpen > 0.7);
     else if (tool === 'hand' && drawerOpen > 0.7) extract(h.it, true);
     else if (tool === 'reagent') dropReagent(h.it);
-    else say('Cımbızla çekmelisin (4).');
+    else say('Cımbızla (5) çekmelisin.');
   } else if (h.id === 'approve' || h.id === 'seize') {
     if (!canDecide()) return;
     pullLever(h.id === 'approve' ? leverApprove : leverSeize);
@@ -2413,14 +2782,15 @@ const ICONS = {
   hand: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="7"/><circle cx="16" cy="16" r="1.8" fill="currentColor"/></svg>',
   eye: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 16c4-6 9-9 13-9s9 3 13 9c-4 6-9 9-13 9S7 22 3 16z"/><circle cx="16" cy="16" r="4" fill="currentColor"/></svg>',
   spatula: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="10" height="8" rx="1" transform="rotate(45 9 8)"/><path d="M13 13l14 14"/></svg>',
-  knife: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor"><path d="M3 3c7 2 12 6 15 11l-3 3C10 13 6 9 3 3z" fill="currentColor" stroke-width="1"/><path d="M17 17l11 11" stroke-width="4" stroke-linecap="round"/></svg>',
-  needle: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l20 20"/><circle cx="26" cy="26" r="3" fill="currentColor"/></svg>',
+  knife: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor"><path d="M3 5l16 16-3 3L3 11z" fill="currentColor" stroke-width="1"/><path d="M5 9l1-1M8 12l1-1M11 15l1-1" stroke="#000" stroke-width="1"/><path d="M19 21l9 8" stroke-width="4" stroke-linecap="round"/></svg>',
+  screwdriver: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor"><path d="M3 3l13 13" stroke-width="2"/><path d="M2 5l3-3" stroke-width="2"/><path d="M16 16l12 12" stroke-width="6" stroke-linecap="round"/></svg>',
+  ripper: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8l6-4M8 4l2 6"/><circle cx="4.5" cy="8" r="1.8" fill="currentColor"/><path d="M9 7l9 9"/><path d="M18 16l10 10" stroke-width="5" stroke-linecap="round"/></svg>',
   tweezers: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 5l20 22M8 3l20 22"/></svg>',
   drop: '<svg viewBox="0 0 32 32"><path d="M16 4c5 7 8 11 8 15a8 8 0 0 1-16 0c0-4 3-8 8-15z" fill="currentColor"/></svg>',
   stamp: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="7" r="4"/><path d="M14 11v6h4v-6"/><rect x="7" y="17" width="18" height="6" fill="currentColor"/><path d="M6 27h20"/></svg>',
   scan: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2"><circle cx="16" cy="16" r="10"/><path d="M16 2v6M16 24v6M2 16h6M24 16h6"/></svg>',
 };
-const TOOL_ICON = { needle: 'needle', knife: 'knife', tweezers: 'tweezers', spatula: 'spatula', reagent: 'drop', forged: 'stamp' };
+const TOOL_ICON = { knife: 'knife', screwdriver: 'screwdriver', ripper: 'ripper', tweezers: 'tweezers', spatula: 'spatula', reagent: 'drop', forged: 'stamp' };
 let cursorIcon = '';
 function setCursor(name) {
   if (name === cursorIcon) return;
@@ -2430,33 +2800,34 @@ function setCursor(name) {
 setCursor('dot');
 
 // ---------- Jeneratör / ışık ----------
-const DAY_LENGTH = 300; // saniye
-let lightLeft = DAY_LENGTH;
 const LAMP_MAX = 6, CEIL_MAX = 14;
 const bulbColor = new THREE.Color(0xffe2a8);
 
 // ---------- Döngü ----------
 scene.add(camera);
 const clock = new THREE.Clock();
-const tmp = new THREE.Vector3();
+const tmp = new THREE.Vector3(), tmpV = new THREE.Vector3();
 const lookNow = new THREE.Vector3();
 const LEAN_OFFSET = new THREE.Vector3(0, 0.42, 0.3);
 let gaugeTimer = 0;
+let glowObj = null;
 function tick() {
   const dt = Math.min(clock.getDelta(), 0.05);
   const t = clock.elapsedTime;
 
-  // Kamera: fareyle hafif kafa hareketi; sağ tıkla eğilip yakından bakma
+  // Kamera: fareyle hafif kafa hareketi; sağ tıkla eğilip yakından bakma. Alet sürüklerken kamera sabit.
   leanK += ((leaning ? 1 : 0) - leanK) * Math.min(1, dt * 7);
-  const sway = 1 - leanK;
-  tmp.set(CAM_BASE.x + mouse.x * 0.04 * sway, CAM_BASE.y + mouse.y * 0.02 * sway, CAM_BASE.z);
-  camera.position.lerpVectors(tmp, tmpV.copy(leanPoint).add(LEAN_OFFSET), leanK);
-  lookNow.set(lookTarget.x + mouse.x * 0.12 * sway, lookTarget.y + mouse.y * 0.06 * sway, lookTarget.z).lerp(leanPoint, leanK);
-  camera.lookAt(lookNow);
+  const steady = knifeDrag || screwDrag ? 0 : 1;
+  const sway = (1 - leanK) * steady;
+  if (steady) {
+    tmp.set(CAM_BASE.x + mouse.x * 0.04 * sway, CAM_BASE.y + mouse.y * 0.02 * sway, CAM_BASE.z);
+    camera.position.lerpVectors(tmp, tmpV.copy(leanPoint).add(LEAN_OFFSET), leanK);
+    lookNow.set(lookTarget.x + mouse.x * 0.12 * sway, lookTarget.y + mouse.y * 0.06 * sway, lookTarget.z).lerp(leanPoint, leanK);
+    camera.lookAt(lookNow);
+  }
   const fov = 62 - 20 * leanK;
   if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
 
-  // Bant
   const beltMoving = (current && current.state === 'incoming') || outgoing.length > 0;
   if (beltMoving) beltTex.offset.x += (BELT_SPEED * dt) / 0.4;
   if (current && current.state === 'incoming') {
@@ -2483,12 +2854,10 @@ function tick() {
     if (p >= 1) { a.pivot.rotation.x = -0.35; leverAnims.splice(i, 1); }
   }
 
-  // Çekmece
   if (!drawerDrag) drawerOpen += (drawerTarget - drawerOpen) * Math.min(1, dt * 8);
   drawer.position.z = DRAWER_CLOSED_Z + drawerOpen * DRAWER_TRAVEL;
   if (tool === 'forged' && drawerTarget < 0.5 && drawerOpen < 0.3) setTool('hand');
 
-  // Terazi
   if (Math.abs(scaleReading - scaleTarget) > 0.5) {
     scaleReading += (scaleTarget - scaleReading) * Math.min(1, dt * 8);
     drawScale(scaleReading + (Math.random() - 0.5) * 3);
@@ -2497,26 +2866,15 @@ function tick() {
     drawScale(scaleReading);
   }
 
-  // Şüphe ibresi yavaşça yerine oturur (hafif titreyerek)
   const target = suspicion + Math.sin(t * 17) * 0.6;
   if (Math.abs(suspShown - target) > 0.15) { suspShown += (target - suspShown) * Math.min(1, dt * 3); drawSuspicion(suspShown); }
 
-  // Tarayıcı ısısı ve sigorta
   if (fuseT > 0) { fuseT = Math.max(0, fuseT - dt); heat = Math.max(0, heat - dt * HEAT_DOWN * 1.5); }
   else if (scanning) {
     heat += dt * HEAT_UP;
     if (heat >= 1) { heat = 1; fuseT = FUSE_TIME; scanning = false; SFX.fuse(); say('SİGORTA ATTI! Tarayıcı soğuyana kadar kullanılamaz.'); }
   } else heat = Math.max(0, heat - dt * HEAT_DOWN);
 
-  // Mürekkep
-  if (inkLevel > 0) {
-    inkTimer -= dt;
-    if (wiping) inkLevel = Math.max(0, inkLevel - dt * 0.7);
-    else if (inkTimer <= 0) inkLevel = Math.max(0, inkLevel - dt * 0.8);
-    inkCanvas.style.opacity = inkLevel;
-  }
-
-  // Müfettiş baskını
   if (current && current.raidAt !== undefined && !raid && canDecide() && !busyEnding) {
     current.raidAt -= dt;
     if (current.raidAt <= 0) { current.raidAt = undefined; startRaid(); }
@@ -2531,7 +2889,6 @@ function tick() {
     if (raid.t <= 0) endRaid();
   }
 
-  // Jeneratör
   if (started && !dayOver) lightLeft = Math.max(0, lightLeft - dt);
   const ratio = lightLeft / DAY_LENGTH;
   const flickerChance = 0.005 + (1 - ratio) * 0.12;
@@ -2551,16 +2908,6 @@ function tick() {
   gaugeTimer -= dt;
   if (gaugeTimer <= 0) { gaugeTimer = 0.25; drawGenerator(ratio); }
 
-  // Gizli yazı merceğe girince okunur
-  if (scanning && current && !current.cb.found) {
-    const it = current.items.find(i => i.inkMark);
-    if (it && lensGap(it.inkMark.getWorldPosition(tmp)) < 0.6) {
-      current.cb.found = true;
-      SFX.aha();
-      say('Gizli mürekkep: "' + current.cb.text.join(' ') + '"', 4500);
-    }
-  }
-
   // İpucu satırı ve imleç
   const h = dayOver || !started || bookOpen ? null : hoverTarget();
   let text;
@@ -2568,17 +2915,25 @@ function tick() {
   if (bookOpen) text = `El kitabı · sayfa ${bookSpread * 2 + 1}–${bookSpread * 2 + 2} / ${SPREADS * 2} · ← → çevir · B kapat`;
   else if (raid) { text = `MÜFETTİŞ GELİYOR! ${Math.max(1, Math.ceil(raid.t))} · çekmeceyi kapat, masayı temizle`; hint.className = 'raid'; }
   else if (performance.now() < sayUntil) { text = sayText; hint.className = 'say'; }
-  else if (inkLevel > 0.3) text = 'Gözlükte mürekkep var · R basılı tut: sil';
   else if (scanning) text = `Tarayıcı · ısı %${Math.round(heat * 100)} · F'yi bırak: soğusun`;
+  else if (screwDrag) text = `Vida sökülüyor… %${Math.round(screwDrag.screw.userData.screw.turned / SCREW_TURN * 100)} · fareyi vidanın etrafında döndür`;
+  else if (knifeDrag) text = 'Aşağı doğru çek, bırak: dilimle';
   else if (h) text = h.text;
-  else if (current && current.state === 'open') text = `${TOOLS[tool].name} elinde · 1–7 aletler · F tara · B el kitabı · sağ tık: eğil`;
-  else text = started ? 'Paket banttan gelir · tıkla: masaya al → tıkla: aç · B: el kitabı · sağ tık: eğil' : '';
+  else if (current && current.state === 'open') text = `${TOOLS[tool].name} elinde · 1–8 aletler · F tara · B el kitabı · sağ tık: eğil`;
+  else text = started && !dayOver ? `Gün ${DAYS[dayIndex].n} · paket banttan gelir · tıkla: masaya al → tıkla: aç · B: el kitabı` : '';
   hint.textContent = text;
+  // Üzerinde durulan kablo ve dikiş hafifçe parlar
+  const glow = h && h.id === 'wire' ? h.obj : h && h.id === 'stitch' ? h.obj.children[0] : null;
+  if (glow !== glowObj) {
+    if (glowObj) glowObj.material.emissive.setHex(0x000000);
+    if (glow) glow.material.emissive.setHex(h.id === 'stitch' ? 0x806030 : 0x3a3a2a);
+    glowObj = glow;
+  }
 
   const clickable = h && (
     ((h.id === 'approve' || h.id === 'seize') && canDecide()) ||
     (h.id === 'package' && ['belt', 'desk'].includes(current.state)) ||
-    ['rack', 'item', 'book', 'drawer', 'seal'].includes(h.id) || (h.id === 'contraband' && !h.it.inTray) ||
+    ['rack', 'item', 'book', 'drawer', 'seal', 'screw', 'wire', 'stitch'].includes(h.id) || (h.id === 'contraband' && !h.it.inTray) ||
     (h.id === 'manifest' && current && current.state !== 'incoming') || (h.id === 'dish' && tool === 'reagent'));
   let icon = 'dot';
   if (bookOpen) icon = 'dot';
