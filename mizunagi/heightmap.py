@@ -124,67 +124,35 @@ def sstep(a, b, x):
 
 
 # --- makro şekil: Kiso referansına göre kalibre (yamaç gövdesi ~28-32°, etekte içbükey kolüvyal geçiş)
-def slope_profile(d, H, L, p=1.6):
-    """Etekten uzaklık d (m) -> yükseklik. Etekte eğim 0, gövdede en dik, sırta doğru yatıklaşır."""
+def slope_profile(d, H, L, fillet=6.0):
+    """Etekten uzaklık d (m) -> yükseklik. Net dağ eteği: ~6 m'lik içbükey geçişten sonra hemen dik (H/L),
+    sırta doğru yatıklaşır (Kiso vadisi yamaç önü)."""
     d = np.clip(d, 0, None)
-    return H * (1 - np.exp(-(d / L) ** p))
+    dd = np.where(d < fillet, d * d / (2 * fillet), d - fillet / 2)
+    return H * (1 - np.exp(-dd / L))
 
 
 floor = 0.5 + 0.010 * np.clip(318 - WY, 0, None) + 0.006 * np.clip(WX - 240, 0, None)      # vadi tabanı (taraça): ~%1 eğim
 foot_n = 142 - 8 * np.sin(WX / 55) - 5 * np.sin(WX / 23 + 1.3) - 22 * np.exp(-((WX - 215) / 35) ** 2)   # kuzey etek; mabet burnu güneye uzanır
-north = slope_profile(foot_n - WY, 85, 110)
+north = slope_profile(foot_n - WY, 80, 115)
 foot_e = 345 + 14 * np.sin(WY / 41 + 0.7)
-east = slope_profile(WX - foot_e, 68, 100) * sstep(262, 200, WY)
-west = slope_profile(62 - WX, 32, 48) * sstep(185, 120, WY)
+east = slope_profile(WX - foot_e, 65, 100) * sstep(262, 200, WY)
+west = slope_profile(62 - WX, 40, 60) * sstep(185, 120, WY)
 hi, lo = np.maximum(north, east), np.minimum(north, east)
 mac = hi + 0.25 * lo + 0.6 * west                                                        # yumuşak maksimum: köşede yığılma yok
 south_hill = 3 * sstep(330, 346, WY)
 mtn = np.clip(mac / 22, 0, 1)
 
-# --- gerçek Kiso kabartma dokusu (Narai, ~3.9 m/px): 100 m'den kısa dalga boylu sırt/dere/burun yapısı
+# --- gerçek Kiso referansı (yalnız eğim kalibrasyonu ve QA karşılaştırması için)
 REF = np.load(os.path.join(HERE, "ref", "kiso_reference.npz"))
 DEM, RES = REF["narai"].astype(np.float64), float(REF["res_m"])
-band = ndi.gaussian_filter(DEM, 1.0) - ndi.gaussian_filter(DEM, 250 / RES / 2.5)          # bant: ~20-250 m (sırt burnu, dere, sırt)
-trend_g = np.gradient(ndi.gaussian_filter(DEM, 300 / RES / 2.5), RES)
-wpx_x, wpx_y = int(BW / RES) + 2, int(BH / RES) + 2
+REF_INFO = dict(source="AWS Terrain Tiles (terrarium z15), Narai-juku Kiso", res_m=round(RES, 2), window_north=[300, 300, 0, False])
 
-
-def pick_window(want_dir):
-    """Büyük ölçekli yamaç yönü bizim yamaçla aynı olan pencereyi ve yönelimi seç (dere yönleri tutarlı olsun)."""
-    best = None
-    for i in range(0, DEM.shape[0] - wpx_y, 24):
-        for j in range(0, DEM.shape[1] - wpx_x, 24):
-            gy_, gx_ = trend_g[0][i:i + wpx_y, j:j + wpx_x], trend_g[1][i:i + wpx_y, j:j + wpx_x]
-            steep = np.hypot(gx_, gy_).mean()
-            for k in range(4):
-                for flip in (False, True):
-                    vx, vy = gx_.mean(), gy_.mean()
-                    for _ in range(k):
-                        vx, vy = vy, -vx                                             # rot90 yönü
-                    if flip:
-                        vx = -vx
-                    n_ = math.hypot(vx, vy) + 1e-9
-                    score = (vx * want_dir[0] + vy * want_dir[1]) / n_ * steep
-                    if best is None or score > best[0]:
-                        best = (score, i, j, k, flip)
-    _, i, j, k, flip = best
-    w = band[i:i + wpx_y + 40, j:j + wpx_x + 40]
-    w = np.rot90(w, k)
-    if flip:
-        w = w[:, ::-1]
-    yy_ = np.arange(BH) / RES
-    xx_ = np.arange(BW) / RES
-    return ndi.map_coordinates(w, np.meshgrid(yy_, xx_, indexing="ij"), order=3, mode="reflect"), best
-
-
-tex_n, info_n = pick_window((0.0, -1.0))          # kuzey yamaç: yükseklik kuzeye (-y) artar
-tex_e, info_e = pick_window((1.0, 0.0))           # doğu yamaç: doğuya (+x) artar
-wn = north / (north + east + 1e-6)
-tex = wn * tex_n + (1 - wn) * tex_e
-REF_INFO = dict(source="AWS Terrain Tiles (terrarium z15), Narai-juku Kiso", res_m=round(RES, 2),
-                window_north=[int(v) for v in info_n[1:4]] + [bool(info_n[4])], window_east=[int(v) for v in info_e[1:4]] + [bool(info_e[4])])
-detail = fbm((BH, BW), (60, 25, 10), (0.25, 0.12, 0.06), 4)
-base = floor + mac + south_hill + tex * (mtn ** 1.3) * 0.6 + detail * (1 - mtn)
+# --- hidrolik erozyon (damla tabanlı, Gaea/World Machine yöntemi), iki ölçek:
+#     2 m ızgara: ana dereler ~15-25 m aralıklı (gerçek birinci derece dere aralığı)
+#     1 m ızgara: hafif ikinci geçiş, yamaç olukları
+from erosion import droplets
+log("hidrolik erozyon")
 # nehir vadisi: taşkın düzlüğü biraz alçak
 riv_xy, _ = resample(PLAN["river"]["points"], 1.0)
 rv = np.zeros((BH, BW), bool)
@@ -192,14 +160,30 @@ ix = np.clip(riv_xy[:, 0].astype(int), 0, BW - 1)
 iy = np.clip(riv_xy[:, 1].astype(int), 0, BH - 1)
 rv[iy, ix] = True
 dr_ = ndi.distance_transform_edt(~rv)
-base -= 1.4 * sstep(40, 8, dr_) * (1 - mtn)
 # nehir vadisi: dağ kesiminde nehir seviyesi yumuşak iner, vadi yamaçları ~31° (gerçek Kiso vadi duvarı)
 near_i = ndi.distance_transform_edt(~rv, return_indices=True)[1]
 riv_lvl_pts = np.interp(riv_xy[:, 1], [-10, 120, 346], [7.0, 2.5, -1.0])
 lvl_img = np.full((BH, BW), np.nan)
 lvl_img[iy, ix] = riv_lvl_pts
 lvl = lvl_img[near_i[0], near_i[1]]
-base = np.minimum(base, lvl + 0.6 * np.clip(dr_ - 11, 0, None) + 1.2)
+pre = floor + mac + south_hill + fbm((BH, BW), (120, 60, 25), (5.0, 2.5, 1.0), 21) * mtn ** 1.2
+pre -= 1.4 * sstep(40, 8, dr_) * (1 - mtn)
+pre = np.minimum(pre, lvl + 0.6 * np.clip(dr_ - 11, 0, None) + 1.2)                 # nehir vadisi erozyondan önce (yamaçları da oyulur)
+c2 = ndi.zoom(pre, 0.5, order=1)
+s2 = ndi.zoom(mac, 0.5, order=1) > 1.0
+e2 = droplets(c2 / 120.0, s2, np.zeros(c2.shape, np.bool_), int(c2.size * 1.2), 7, radius=3) * 120.0
+d2 = ndi.zoom(e2 - c2, 2.0, order=3)
+d2 = np.pad(d2, ((0, max(0, BH - d2.shape[0])), (0, max(0, BW - d2.shape[1]))), mode="edge")[:BH, :BW]
+e1 = pre + d2
+e1 = droplets(e1 / 60.0, mac > 1.0, np.zeros(e1.shape, np.bool_), int(e1.size * 0.3), 11, radius=2) * 60.0
+_dz = e1 - pre                                                            # etekte tortu yığılmasını sınırla: net dağ eteği
+e1 = pre + np.where(_dz > 0, _dz * sstep(1.0, 14.0, mac), _dz)
+from erosion import _clip_slope
+for _ in range(6):                                                        # eşik yamaç: ~40° üstü kayar (talus)
+    e1 = _clip_slope(e1, mac <= 0.3, math.tan(math.radians(40)))
+e1 = np.where(mac > 0.3, ndi.gaussian_filter(e1, 0.6), e1)
+detail = fbm((BH, BW), (60, 25, 10), (0.25, 0.12, 0.06), 4)
+base = e1 + detail * (1 - mtn)
 kd = next(a for a in PLAN["areas"] if a["type"] == "keidai")["rect"]
 kcx, kcy = (kd[0] + kd[2]) / 2, (kd[1] + kd[3]) / 2
 log("doğal arazi (gerçek Kiso dokusu)")
@@ -617,8 +601,8 @@ for (x0, x1, y0, y1), m, val in SURF[::-1]:
 # ------------------------------------------------------------------ doğal alanlarda hafif yumuşatma (kilitli olmayan)
 log("son yumuşatma")
 free = ~lock & ~water
-near_lock = ndi.binary_dilation(lock | water, iterations=4)
-sm = ndi.gaussian_filter(Z, 1.0)
+near_lock = ndi.binary_dilation(lock | water, iterations=1)
+sm = ndi.gaussian_filter(Z, 2.0)
 Z[free & ~near_lock] = sm[free & ~near_lock]
 
 # ------------------------------------------------------------------ QA

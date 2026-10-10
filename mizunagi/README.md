@@ -23,7 +23,12 @@
 
 **Import ayarları:** Scale X/Y = 25, Z ve Location Z değerleri `height_meta.json` içindeki `unreal` alanında. Haritanın (0,0) noktası kuzeybatı köşe; +X doğu, +Y güney.
 
-**Gerçek referans:** Yamaçların kabartma dokusu (sırt burnu, dere, sırt) gerçek Kiso vadisi verisinden geliyor: Narai-juku çevresi, AWS Terrain Tiles, z15, ~3,9 m. Veri `ref/kiso_reference.npz` dosyasında; `ref/fetch_reference_dem.py` ile yeniden indirilebilir. Dağların genel şekli Kiso eğimlerine göre kalibre edildi. QA'da `reference_compare` alanı ormanlık yamaç eğimini gerçek veriyle karşılaştırıyor (ör. medyan 31° / Kiso 29°, p90 42° / Kiso 40°). Yan yana görsel: `preview_reference_compare.png`.
+**Doğal arazi:** Dağlar tasarım kotunda bir makro yüzeyle başlıyor: net dağ eteği, gövdede ~30°. Bu yüzeye iki ölçekli, damla tabanlı hidrolik erozyon (`erosion.py`, Gaea/World Machine yöntemi) uygulanıyor:
+- 2 m ızgarada ana dereler oluşuyor, aralarında gerçek ölçekte 15–25 m var.
+- 1 m ızgarada yamaç olukları ekleniyor.
+- 40°'yi aşan yamaçlar taşla kayıyor; tortunun dağ eteğinde yığılması sınırlı.
+
+Eğim dağılımı gerçek Kiso (Narai) verisiyle karşılaştırılıyor: `ref/kiso_reference.npz`, QA'da `reference_compare` alanı.
 
 **Neler var:**
 - **Yollar:** Boyuna profil araziden yumuşatılıyor ve eğim sınırına uyduruluyor (ana yol %6, yol %8, sokak %10, roji %12, Sakamichi %15). Kavşaklar önce yapılan yola sabitleniyor. Enine %2 bombe ve 0,4 m banket var; şevler kesmede 1:1, dolguda 1:1,5. Kotlar yol eksenine izdüşümle hesaplandığı için kademe oluşmuyor. Virajlarda karşı koldan kot alınmaması için yol 15 m'lik parçalarla işleniyor.
