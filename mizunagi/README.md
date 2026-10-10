@@ -23,12 +23,14 @@
 
 **Import ayarları:** Scale X/Y = 25, Z ve Location Z değerleri `height_meta.json` içindeki `unreal` alanında. Haritanın (0,0) noktası kuzeybatı köşe; +X doğu, +Y güney.
 
+**Gerçek referans:** Yamaçların kabartma dokusu (sırt burnu, dere, sırt) gerçek Kiso vadisi verisinden geliyor: Narai-juku çevresi, AWS Terrain Tiles, z15, ~3,9 m. Veri `ref/kiso_reference.npz` dosyasında; `ref/fetch_reference_dem.py` ile yeniden indirilebilir. Dağların genel şekli Kiso eğimlerine göre kalibre edildi. QA'da `reference_compare` alanı ormanlık yamaç eğimini gerçek veriyle karşılaştırıyor (ör. medyan 31° / Kiso 29°, p90 42° / Kiso 40°). Yan yana görsel: `preview_reference_compare.png`.
+
 **Neler var:**
 - **Yollar:** Boyuna profil araziden yumuşatılıyor ve eğim sınırına uyduruluyor (ana yol %6, yol %8, sokak %10, roji %12, Sakamichi %15). Kavşaklar önce yapılan yola sabitleniyor. Enine %2 bombe ve 0,4 m banket var; şevler kesmede 1:1, dolguda 1:1,5. Kotlar yol eksenine izdüşümle hesaplandığı için kademe oluşmuyor. Virajlarda karşı koldan kot alınmaması için yol 15 m'lik parçalarla işleniyor.
 - **Nehir:** Yatak yukarıdan aşağı monoton iniyor. Taş şev, 3 m genişliğinde set kreti ve 1:2 iç şev var. Dağ kesiminde vadi V şeklinde oyuluyor.
 - **Demiryolu:** En fazla %0,8 eğim, balastlı yatak, peron ray kotunun 1,1 m üstünde.
-- **Mabet:** Doğal sırt üstünde düz bir teras. Basamakların eteğinden terasa 16 m yükselti var, 3 kol ve 2 sahanlık halinde.
+- **Mabet:** Yamaca oturan iki kademeli avlu: alt kademede haiden, 2,4 m yukarıdaki üst kademede honden; arkası taş duvarlı kazı. Basamak eteğinden alt avluya 16 m yükselti var, 3 kol ve 2 sahanlık halinde.
 - **Kanallar:** Akış yönünde monoton, beton U-kanal kesiti. Yol altında menfez bırakılıyor.
 - **Çeltik:** Her tarla 5 cm kademeli düz bir teras, kenarlarında 0,5 m'lik aze sırtı var.
-- **Parseller:** Ped kotu ön kenardaki yol kotunun 12 cm üstünde. Yamaçta ishigaki tarzı kademeler var.
+- **Parseller:** Ped kotu ön kenardaki yol kotunun 12 cm üstünde. Yamaç evlerinde parselin tamamı değil, yalnız ev ve 2,5 m avlusu düzleniyor (taş duvarlı küçük teras, ishigaki).
 - **Mesh olarak eklenmesi gerekenler:** Köprü tabliyeleri, basamaklar, istinat duvarları.

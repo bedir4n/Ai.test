@@ -123,17 +123,68 @@ def sstep(a, b, x):
     return t * t * (3 - 2 * t)
 
 
-floor = 0.6 + 0.012 * np.clip(318 - WY, 0, None) + 0.008 * np.clip(WX - 240, 0, None)     # vadi tabanı: kuzey ve doğuya hafif yükselir
-foot_n = 140 - 10 * np.sin(WX / 55) - 6 * np.sin(WX / 23 + 1.3) - 18 * np.exp(-((WX - 215) / 40) ** 2)                          # kuzey yamaç eteği (organik)
-north = 46 * sstep(foot_n, foot_n - 115, WY) ** 1.25
-east = 30 * sstep(330, 438, WX) * sstep(250, 120, WY)
-west = 11 * sstep(62, 5, WX) * sstep(170, 60, WY)
-south_hill = 4 * sstep(330, 346, WY)                                                     # demiryolu güneyinde hafif sırt
-mtn = np.clip((north + east + west) / 46, 0, 1)
-ridged = 1 - np.abs(fbm((BH, BW), (70, 32, 15), (1.0, 0.55, 0.3), 3))
-ridged = (ridged - ridged.mean()) / ridged.std()
-detail = fbm((BH, BW), (140, 60, 25, 10, 5), (3.5, 1.2, .6, .3, .15), 4)
-base = floor + north + east + west + south_hill + mtn ** 1.6 * ridged * 6.5 + detail * (0.2 + 1.6 * mtn ** 1.5)
+# --- makro şekil: Kiso referansına göre kalibre (yamaç gövdesi ~28-32°, etekte içbükey kolüvyal geçiş)
+def slope_profile(d, H, L, p=1.6):
+    """Etekten uzaklık d (m) -> yükseklik. Etekte eğim 0, gövdede en dik, sırta doğru yatıklaşır."""
+    d = np.clip(d, 0, None)
+    return H * (1 - np.exp(-(d / L) ** p))
+
+
+floor = 0.5 + 0.010 * np.clip(318 - WY, 0, None) + 0.006 * np.clip(WX - 240, 0, None)      # vadi tabanı (taraça): ~%1 eğim
+foot_n = 142 - 8 * np.sin(WX / 55) - 5 * np.sin(WX / 23 + 1.3) - 22 * np.exp(-((WX - 215) / 35) ** 2)   # kuzey etek; mabet burnu güneye uzanır
+north = slope_profile(foot_n - WY, 85, 110)
+foot_e = 345 + 14 * np.sin(WY / 41 + 0.7)
+east = slope_profile(WX - foot_e, 68, 100) * sstep(262, 200, WY)
+west = slope_profile(62 - WX, 32, 48) * sstep(185, 120, WY)
+hi, lo = np.maximum(north, east), np.minimum(north, east)
+mac = hi + 0.25 * lo + 0.6 * west                                                        # yumuşak maksimum: köşede yığılma yok
+south_hill = 3 * sstep(330, 346, WY)
+mtn = np.clip(mac / 22, 0, 1)
+
+# --- gerçek Kiso kabartma dokusu (Narai, ~3.9 m/px): 100 m'den kısa dalga boylu sırt/dere/burun yapısı
+REF = np.load(os.path.join(HERE, "ref", "kiso_reference.npz"))
+DEM, RES = REF["narai"].astype(np.float64), float(REF["res_m"])
+band = ndi.gaussian_filter(DEM, 1.0) - ndi.gaussian_filter(DEM, 250 / RES / 2.5)          # bant: ~20-250 m (sırt burnu, dere, sırt)
+trend_g = np.gradient(ndi.gaussian_filter(DEM, 300 / RES / 2.5), RES)
+wpx_x, wpx_y = int(BW / RES) + 2, int(BH / RES) + 2
+
+
+def pick_window(want_dir):
+    """Büyük ölçekli yamaç yönü bizim yamaçla aynı olan pencereyi ve yönelimi seç (dere yönleri tutarlı olsun)."""
+    best = None
+    for i in range(0, DEM.shape[0] - wpx_y, 24):
+        for j in range(0, DEM.shape[1] - wpx_x, 24):
+            gy_, gx_ = trend_g[0][i:i + wpx_y, j:j + wpx_x], trend_g[1][i:i + wpx_y, j:j + wpx_x]
+            steep = np.hypot(gx_, gy_).mean()
+            for k in range(4):
+                for flip in (False, True):
+                    vx, vy = gx_.mean(), gy_.mean()
+                    for _ in range(k):
+                        vx, vy = vy, -vx                                             # rot90 yönü
+                    if flip:
+                        vx = -vx
+                    n_ = math.hypot(vx, vy) + 1e-9
+                    score = (vx * want_dir[0] + vy * want_dir[1]) / n_ * steep
+                    if best is None or score > best[0]:
+                        best = (score, i, j, k, flip)
+    _, i, j, k, flip = best
+    w = band[i:i + wpx_y + 40, j:j + wpx_x + 40]
+    w = np.rot90(w, k)
+    if flip:
+        w = w[:, ::-1]
+    yy_ = np.arange(BH) / RES
+    xx_ = np.arange(BW) / RES
+    return ndi.map_coordinates(w, np.meshgrid(yy_, xx_, indexing="ij"), order=3, mode="reflect"), best
+
+
+tex_n, info_n = pick_window((0.0, -1.0))          # kuzey yamaç: yükseklik kuzeye (-y) artar
+tex_e, info_e = pick_window((1.0, 0.0))           # doğu yamaç: doğuya (+x) artar
+wn = north / (north + east + 1e-6)
+tex = wn * tex_n + (1 - wn) * tex_e
+REF_INFO = dict(source="AWS Terrain Tiles (terrarium z15), Narai-juku Kiso", res_m=round(RES, 2),
+                window_north=[int(v) for v in info_n[1:4]] + [bool(info_n[4])], window_east=[int(v) for v in info_e[1:4]] + [bool(info_e[4])])
+detail = fbm((BH, BW), (60, 25, 10), (0.25, 0.12, 0.06), 4)
+base = floor + mac + south_hill + tex * (mtn ** 1.3) * 0.6 + detail * (1 - mtn)
 # nehir vadisi: taşkın düzlüğü biraz alçak
 riv_xy, _ = resample(PLAN["river"]["points"], 1.0)
 rv = np.zeros((BH, BW), bool)
@@ -141,67 +192,27 @@ ix = np.clip(riv_xy[:, 0].astype(int), 0, BW - 1)
 iy = np.clip(riv_xy[:, 1].astype(int), 0, BH - 1)
 rv[iy, ix] = True
 dr_ = ndi.distance_transform_edt(~rv)
-base -= 1.6 * sstep(40, 8, dr_) * (1 - mtn)
-# nehir vadisi: dağ kesiminde nehir seviyesi yumuşak iner, yamaçlar V şeklinde (%38) oyulur
+base -= 1.4 * sstep(40, 8, dr_) * (1 - mtn)
+# nehir vadisi: dağ kesiminde nehir seviyesi yumuşak iner, vadi yamaçları ~31° (gerçek Kiso vadi duvarı)
 near_i = ndi.distance_transform_edt(~rv, return_indices=True)[1]
 riv_lvl_pts = np.interp(riv_xy[:, 1], [-10, 120, 346], [7.0, 2.5, -1.0])
 lvl_img = np.full((BH, BW), np.nan)
 lvl_img[iy, ix] = riv_lvl_pts
 lvl = lvl_img[near_i[0], near_i[1]]
-base = np.minimum(base, lvl + 0.38 * np.clip(dr_ - 11, 0, None) + 1.2)
-# mabet sırtı (honden çevresinde doğal çıkıntı) — teras yapay kazı değil, sırta oturur
+base = np.minimum(base, lvl + 0.6 * np.clip(dr_ - 11, 0, None) + 1.2)
 kd = next(a for a in PLAN["areas"] if a["type"] == "keidai")["rect"]
 kcx, kcy = (kd[0] + kd[2]) / 2, (kd[1] + kd[3]) / 2
-
-
-def stream_power(z, mask, iters=3, K=0.035):
-    """D8 akış birikimi ile vadi oyma (stream-power: E = K A^0.5 S)."""
-    h, w = z.shape
-    nb = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
-    for _ in range(iters):
-        zp = np.pad(z, 1, mode="edge")
-        best = np.zeros_like(z)
-        rec = np.full(z.shape, -1, np.int64)
-        idx = np.arange(h * w).reshape(h, w)
-        for dy, dx in nb:
-            dist = math.hypot(dy, dx)
-            s = (z - zp[1 + dy:1 + dy + h, 1 + dx:1 + dx + w]) / dist
-            better = s > best
-            best = np.where(better, s, best)
-            ny_ = np.clip(np.arange(h)[:, None] + dy, 0, h - 1)
-            nx_ = np.clip(np.arange(w)[None, :] + dx, 0, w - 1)
-            rec = np.where(better, idx[ny_, nx_], rec)
-        A = np.ones(h * w)
-        order = np.argsort(-z.ravel())
-        recf = rec.ravel()
-        for i in order:
-            r = recf[i]
-            if r >= 0:
-                A[r] += A[i]
-        E = K * np.sqrt(A.reshape(h, w)) * best
-        z = z - np.clip(E, 0, 1.2) * mask
-        z = ndi.gaussian_filter(z, 0.7) * mask + z * (1 - mask)
-    return z
-
-
-log("doğal arazi + erozyon")
-base = stream_power(base, sstep(0.08, 0.35, mtn))
-# 25 cm ızgaraya bikübik
+log("doğal arazi (gerçek Kiso dokusu)")
 YY, XX = np.mgrid[0:NY, 0:NX].astype(np.float32) * CELL
 Z = ndi.map_coordinates(base, [YY, XX], order=3, mode="nearest").astype(np.float64)
 mtn_f = ndi.map_coordinates(mtn, [YY, XX], order=1, mode="nearest")
-Z += fbm((NY, NX), (12, 5, 2), (0.06, 0.03, 0.015), 7) * (0.3 + 2 * mtn_f)
-# mabet sırtı: basamak ayağı +16 m kotunda doğal bir çıkıntı (kazı ile oyulmuş kutu değil)
+Z += fbm((NY, NX), (6, 3, 1.5), (0.04, 0.02, 0.01), 7) * (0.3 + 1.0 * mtn_f)
+# --- mabet burnu: teras ve basamak hattı doğal bir sırt burnunun sırtında (yanlar ~35°, arkası yamaca bağlanır)
 _sando_end = next(r for r in PLAN["roads"] if r["name"] == "Sando")["points"][-1]
 _st = next(a for a in PLAN["areas"] if a["type"] == "steps")["rect"]
 _foot = float(ndi.map_coordinates(Z, [[(_st[3] + 3.0) / CELL], [_sando_end[0] / CELL]], order=1)[0])
-_dk = np.hypot((XX - kcx) / 1.0, (YY - kcy) / 0.8)
-_w = np.exp(-(_dk / 30.0) ** 2)
-Z = Z + _w * ((_foot + 16.0) - Z)
-_ds = np.hypot(XX - (_st[0] + _st[2]) / 2, np.clip(np.abs(YY - (_st[1] + _st[3]) / 2) - (_st[3] - _st[1]) / 2, 0, None))
-_ramp = _foot + 16.0 * np.clip((_st[3] - YY) / (_st[3] - _st[1]), 0, 1)
-_w2 = np.exp(-(_ds / 9.0) ** 2) * ((YY > _st[1] - 4) & (YY < _st[3] + 4))
-Z = Z + _w2 * (_ramp - Z)
+_kz = Z[int(kd[1] / CELL):int(kd[3] / CELL), int(kd[0] / CELL):int(kd[2] / CELL)]
+_T = _foot + 16.0                                                     # tasarım: 16 m yükselti (~100 basamak); arkası taş duvarlı kazı
 NATURAL = Z.copy()
 
 lock = np.zeros((NY, NX), bool)              # kilitli (yapılmış) yüzey
@@ -344,9 +355,9 @@ log("mabet")
 roads = {r["name"]: r for r in PLAN["roads"]}
 sando_end = roads["Sando"]["points"][-1]
 st = next(a for a in PLAN["areas"] if a["type"] == "steps")["rect"]
-foot = float(sample(Z, np.array([[sando_end[0], st[3] + 1.0]]))[0])
-foot = max(foot, float(sample(Z, np.array([[sando_end[0], st[3] + 6.0]]))[0]))
-TERRACE = foot + 16.0
+foot = _foot
+TERRACE = _T
+RISE = TERRACE - foot
 pad_rect = [kd[0] - 1, kd[1] - 1, kd[2] + 1, kd[3] + 1]
 
 
@@ -374,7 +385,11 @@ def rect_poly(r):
     return [(r[0], r[1]), (r[2], r[1]), (r[2], r[3]), (r[0], r[3])]
 
 
-pad_poly(rect_poly(pad_rect), TERRACE, B=25, kc=0.9, kf=0.6, layer="gravel")
+# iki kademeli avlu: üst kademe honden (+2.4 m, taş duvar), alt kademe haiden/shamusho/festival deposu
+_hd = next(b for b in PLAN["buildings"] if b["type"] == "haiden")
+y_split = _hd["y"] - _hd["d"] / 2 - 1.5
+pad_poly(rect_poly([pad_rect[0] + 4, pad_rect[1], pad_rect[2] - 4, y_split]), TERRACE + 2.4, B=20, kc=1.5, kf=0.55, layer="gravel")
+pad_poly(rect_poly([pad_rect[0], y_split, pad_rect[2], pad_rect[3]]), TERRACE, B=20, kc=1.5, kf=0.55, layer="gravel")
 # basamak rampası: 3 kol, 2 sahanlık (sahanlık = düz). Basamak geometrisi mesh ile oturur.
 sx0, sy0, sx1, sy1 = st
 L = sy1 - sy0
@@ -391,15 +406,15 @@ for yi in ys:
     up = 0.0
     for a, b in [(1 - b_, 1 - a_) for a_, b_ in fl[::-1]]:
         up += np.clip(fu - a, 0, b - a)
-    h = foot + 16.0 * up / runs
+    h = foot + RISE * up / runs
     Z[yi, int(sx0 / CELL):int(sx1 / CELL) + 1] = h
     lock[yi, int(sx0 / CELL):int(sx1 / CELL) + 1] = True
     LAYER["gravel"][yi, int(sx0 / CELL):int(sx1 / CELL) + 1] = 1
 # basamak yanları: doğal yamaçla şevli geçiş
 pad_poly(rect_poly([sx0, sy0, sx1, sy1]), None, B=0) if False else None
 xs_c = np.array([(sx0 + sx1) / 2] * 2)
-STEPS = dict(foot_m=round(foot, 3), top_m=round(TERRACE, 3), rise_m=16.0, flights=3, landings=2, run_m=round(L, 2),
-             steps_at_160mm=int(round(16.0 / 0.16)))
+STEPS = dict(foot_m=round(foot, 3), top_m=round(TERRACE, 3), upper_terrace_m=round(TERRACE + 2.4, 3), rise_m=round(RISE, 2), flights=3, landings=2, run_m=round(L, 2),
+             steps_at_160mm=int(round(RISE / 0.16)))
 
 # ------------------------------------------------------------------ 5) yollar
 log("yollar")
@@ -425,11 +440,26 @@ def bridge_profile(ss, zc, pins):
 # Old Kaido köprüden önce: köprü ayaklarını set kretine oturtacak şekilde Old Kaido profiline köprüyü dahil et
 STEPS_MASK = np.zeros((NY, NX), bool)
 STEPS_MASK[int(st[1] / CELL):int(st[3] / CELL) + 1, int(st[0] / CELL):int(st[2] / CELL) + 1] = True
-SKIP_R = RIVER_MASK | STEPS_MASK
+KEIDAI_MASK = np.zeros((NY, NX), bool)
+KEIDAI_MASK[int((kd[1] - 1) / CELL):int((kd[3] + 1) / CELL) + 1, int((kd[0] - 1) / CELL):int((kd[2] + 1) / CELL) + 1] = True
+SKIP_R = RIVER_MASK | STEPS_MASK | KEIDAI_MASK
+def _touches(r, others):
+    """Bu yolun kaç ucu aynı türden başka bir yolun üzerine bağlanıyor (kol yollar gövdeden sonra işlenir)."""
+    n = 0
+    for e in (r["points"][0], r["points"][-1]):
+        for o in others:
+            if o is r:
+                continue
+            q = np.asarray(o["points"])
+            if np.min(np.hypot(q[:, 0] - e[0], q[:, 1] - e[1])) < o["width_m"] + 2:
+                n += 1
+                break
+    return n
+
+
 for kind in ORDER:
-    for r in PLAN["roads"]:
-        if r["kind"] != kind:
-            continue
+    same = [r for r in PLAN["roads"] if r["kind"] == kind]
+    for r in sorted(same, key=lambda r: (_touches(r, same), -len(r["points"]))):
         crown, g, sig, layer = KIND[kind]
         g = GRADE_OVERRIDE.get(r["name"], g)
         hw = r["width_m"] / 2
@@ -437,7 +467,7 @@ for kind in ORDER:
             xy, prof = corridor(r["points"], hw, crown, g, sig, layer, skip=SKIP_R, prof_override=bridge_profile)
         else:
             xy, prof = corridor(r["points"], hw, crown, g, sig, layer, skip=SKIP_R,
-                                kf=0.667 if kind in ("main", "road", "lane") else 0.8, kc=1.0 if kind != "post" else 1.4,
+                                kf=0.667 if kind in ("main", "road", "lane") else 0.8, kc=1.5 if r["name"] in ("Mountain Road", "Sakamichi", "Forestry road", "Forest link", "Old postal path") else 1.0,
                                 B=18 if kind in ("main", "road") else 10)
         road_profiles[r["name"]] = (xy, prof, hw, crown, g)
 
@@ -494,21 +524,42 @@ for a in PLAN["areas"]:
     lay = {"parking": "asphalt", "plaza": "asphalt", "schoolyard": "gravel", "park": "gravel"}.get(a["type"])
     pad_poly(poly, h + 0.05, B=8, layer=lay)
 PARCEL_PADS = {}
+BY_PARCEL = {}
+for b in PLAN["buildings"]:
+    if b.get("parcel") is not None:
+        BY_PARCEL.setdefault(b["parcel"], []).append(b)
+
+
+def bpoly(b, m):
+    c, s_ = math.cos(b["ang"]), math.sin(b["ang"])
+    w, d_ = b["w"] + 2 * m, b["d"] + 2 * m
+    return [(b["x"] + u * c - v * s_, b["y"] + u * s_ + v * c) for u, v in ((-w / 2, -d_ / 2), (w / 2, -d_ / 2), (w / 2, d_ / 2), (-w / 2, d_ / 2))]
+
+
 for p in PLAN["parcels"]:
     poly = p["poly"]
     xy = np.asarray(poly)
     med = float(np.median(sample(Z, np.vstack([xy, xy.mean(0, keepdims=True)]))))
-    if p["zone"] in ("farm", "mountain"):
-        h, B, kc, kf = med, 12, 0.8, 0.55
-    elif p["zone"] in ("mtnroad", "rural"):
-        h, B, kc, kf = 0.5 * (front_height(poly) + 0.12) + 0.5 * med, 12, 0.8, 0.55
+    if p["zone"] in ("mtnroad", "mountain"):
+        # yamaç evi: parselin tamamı değil, yalnız ev + 2.5 m avlu düzlenir (taş duvarlı küçük teras, ishigaki)
+        PARCEL_PADS[p["id"]] = None
+        for b in BY_PARCEL.get(p["id"], []):
+            if b["type"] in ("porch",):
+                continue
+            pp = bpoly(b, 2.5 if b["type"] not in ("carport", "shed", "kura") else 1.0)
+            pxy = np.asarray(pp)
+            h = float(np.median(sample(Z, np.vstack([pxy, [[b["x"], b["y"]]]]))))
+            pad_poly(pp, h, B=10, kc=1.5, kf=0.7, layer="garden")
+        continue
+    if p["zone"] in ("farm", "rural"):
+        h, B, kc, kf = med, 10, 1.0, 0.6
     else:
         h, B, kc, kf = front_height(poly) + 0.12, 6, 1.2, 0.8
     PARCEL_PADS[p["id"]] = h
     pad_poly(poly, h, B=B, kc=kc, kf=kf, layer="garden")
 PAD_REPORT = []
 for b in PLAN["buildings"]:
-    if b.get("parcel") is not None and b["parcel"] in PARCEL_PADS:
+    if b.get("parcel") is not None and b["parcel"] in PARCEL_PADS:  # parsel pedinde (yamaç evleri ayrıca)
         continue
     if b["type"] in ("torii", "tunnel", "radio_mast", "lookout"):
         continue
@@ -617,6 +668,16 @@ qa["channels"] = CH
 qa["shrine"] = STEPS
 qa["paddy_cells"] = len(PADDY_CELLS)
 qa["z_range_m"] = [round(float(Z.min()), 2), round(float(Z.max()), 2)]
+# gerçek Kiso referansı ile karşılaştırma: ormanlık yamaç eğimi ve 440x345 m pencere rölyefi
+_gy, _gx = np.gradient(ndi.zoom(Z, CELL / RES, order=1), RES)
+_sl = np.degrees(np.arctan(np.hypot(_gx, _gy)))
+_fm = ndi.zoom(((mtn_f > 0.6) & ~ndi.binary_dilation(lock, iterations=48)).astype(float), CELL / RES, order=0) > 0.5
+_rgy, _rgx = np.gradient(DEM, RES)
+_rsl = np.degrees(np.arctan(np.hypot(_rgx, _rgy)))
+qa["reference_compare"] = dict(
+    ours_forest_slope_deg=dict(p50=round(float(np.percentile(_sl[_fm], 50)), 1), p90=round(float(np.percentile(_sl[_fm], 90)), 1)),
+    kiso_narai_slope_deg=dict(p50=round(float(np.percentile(_rsl, 50)), 1), p90=round(float(np.percentile(_rsl, 90)), 1)),
+    ours_relief_m=round(float(np.ptp(Z)), 1), kiso_relief_440x345_p10_p50=[124, 223], source=REF_INFO)
 
 # ------------------------------------------------------------------ çıktı: 16-bit heightmap + Unreal ayarları
 zmin, zmax = float(Z.min()), float(Z.max())
@@ -664,14 +725,30 @@ t = (Z - zmin) / span
 tint = np.stack([0.55 + 0.35 * t, 0.62 + 0.25 * t, 0.48 + 0.3 * t], -1)
 rgb = tint * (0.35 + 0.75 * hs[..., None])
 rgb[water] = rgb[water] * 0.5 + np.array([0.35, 0.5, 0.65]) * 0.5
-cont = (np.floor(Z / 1.0) != np.floor(ndi.shift(Z, (0, 1), order=0, mode="nearest") / 1.0)) | \
-       (np.floor(Z / 1.0) != np.floor(ndi.shift(Z, (1, 0), order=0, mode="nearest") / 1.0))
-rgb[cont & ~lock] *= 0.75
+def _cont(iv):
+    q = np.floor(Z / iv)
+    return (q != np.floor(ndi.shift(Z, (0, 1), order=0, mode="nearest") / iv)) | (q != np.floor(ndi.shift(Z, (1, 0), order=0, mode="nearest") / iv))
+
+
+rgb[_cont(5.0) & ~lock] *= 0.82
+rgb[ndi.binary_dilation(_cont(25.0)) & ~lock] *= 0.7
 asp = L_["asphalt"] / tot > 0.5
 rgb[asp] = rgb[asp] * 0.55 + 0.45 * np.array([0.92, 0.9, 0.86])
 img = Image.fromarray((np.clip(rgb, 0, 1) * 255).astype(np.uint8))
 img.save(os.path.join(OUT, "preview_full.png"))
 img.crop((int(95 / CELL), int(135 / CELL), int(330 / CELL), int(320 / CELL))).save(os.path.join(OUT, "preview_town.png"))
+# gerçek Kiso ile yan yana: aynı ölçek (3.87 m/px), aynı ışık
+def _hs(D, res):
+    gy_, gx_ = np.gradient(D, res)
+    return np.clip(0.55 + (-gx_ - gy_) * 0.3, 0, 1)
+
+
+ours = ndi.zoom(Z, CELL / RES, order=1)
+ny_, nx_ = ours.shape
+i0, j0 = REF_INFO["window_north"][0], REF_INFO["window_north"][1]
+refw = DEM[i0:i0 + ny_, j0:j0 + nx_]
+cmp_ = np.hstack([_hs(ours, RES), np.ones((ny_, 4)), _hs(refw, RES)[:ny_, :nx_]])
+Image.fromarray((cmp_ * 255).astype(np.uint8)).resize((cmp_.shape[1] * 3, ny_ * 3), Image.BICUBIC).save(os.path.join(OUT, "preview_reference_compare.png"))
 hs_img = Image.fromarray((hs * 255).astype(np.uint8))
 hs_img.save(os.path.join(OUT, "preview_hillshade.png"))
 
