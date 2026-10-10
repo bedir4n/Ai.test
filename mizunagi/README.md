@@ -9,3 +9,26 @@
 - **Arazi:** Sugi plantasyonu düzenli sıralarla ve kesim açıklıklarıyla gösteriliyor, doğal karışık ormandan ayrı. Çeltik tarlaları savak, kanal ve tarla içi hendeklerle nehre bağlı.
 - **Oyun verisi:** JSON'da `delivery` alanı teslimat adresinin numarasını, `enterable` alanı iç mekânı girilebilir yapıları işaretliyor.
 - **QA:** Çıktının `qa` alanında. Yola taşan, suya taşan veya birbiriyle çakışan bina ve yola taşan parsel sayısı 0 olmalı.
+
+## Yükseklik haritası (Unreal Landscape)
+
+`python3 heightmap.py` komutu planı (`out/mizunagi_plan.json`) okur ve `out/height/` klasörüne şunları yazar:
+
+| Dosya | İçerik |
+|---|---|
+| `mizunagi_height.png` / `.r16` | 16-bit yükseklik, 1765 × 1387 (28 × 22 bileşen, 63×63 quad, 1 bölüm) |
+| `layer_*.png` | 8-bit katman ağırlıkları: asfalt, toprak yol, çakıl, çeltik, su yatağı, bahçe, orman, kaya, çim (toplamı 255) |
+| `height_meta.json` | Import ölçeği, Location Z, QA raporu, yol profilleri (köprü tabliyeleri için) |
+| `preview_*.png` | Gölgelendirilmiş önizlemeler |
+
+**Import ayarları:** Scale X/Y = 25, Z ve Location Z değerleri `height_meta.json` içindeki `unreal` alanında. Haritanın (0,0) noktası kuzeybatı köşe; +X doğu, +Y güney.
+
+**Neler var:**
+- **Yollar:** Boyuna profil araziden yumuşatılıyor ve eğim sınırına uyduruluyor (ana yol %6, yol %8, sokak %10, roji %12, Sakamichi %15). Kavşaklar önce yapılan yola sabitleniyor. Enine %2 bombe ve 0,4 m banket var; şevler kesmede 1:1, dolguda 1:1,5. Kotlar yol eksenine izdüşümle hesaplandığı için kademe oluşmuyor. Virajlarda karşı koldan kot alınmaması için yol 15 m'lik parçalarla işleniyor.
+- **Nehir:** Yatak yukarıdan aşağı monoton iniyor. Taş şev, 3 m genişliğinde set kreti ve 1:2 iç şev var. Dağ kesiminde vadi V şeklinde oyuluyor.
+- **Demiryolu:** En fazla %0,8 eğim, balastlı yatak, peron ray kotunun 1,1 m üstünde.
+- **Mabet:** Doğal sırt üstünde düz bir teras. Basamakların eteğinden terasa 16 m yükselti var, 3 kol ve 2 sahanlık halinde.
+- **Kanallar:** Akış yönünde monoton, beton U-kanal kesiti. Yol altında menfez bırakılıyor.
+- **Çeltik:** Her tarla 5 cm kademeli düz bir teras, kenarlarında 0,5 m'lik aze sırtı var.
+- **Parseller:** Ped kotu ön kenardaki yol kotunun 12 cm üstünde. Yamaçta ishigaki tarzı kademeler var.
+- **Mesh olarak eklenmesi gerekenler:** Köprü tabliyeleri, basamaklar, istinat duvarları.
