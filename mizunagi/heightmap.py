@@ -450,6 +450,10 @@ for kind in ORDER:
         if kind == "bridge":
             xy, prof = corridor(r["points"], hw, crown, g, sig, layer, skip=SKIP_R, prof_override=bridge_profile)
         else:
+            if kind in ("trail", "post", "dirt") and r["name"] not in ("West Bank Lane", "SE farm road", "Farm road E", "Farm road S", "Farm road SW"):
+                xy, prof = corridor(r["points"], hw, 0.0 if kind != "dirt" else 0.02, g, 3.0, layer, skip=SKIP_R, kc=1.6, kf=0.9, B=5, shoulder=0.2)
+                road_profiles[r["name"]] = (xy, prof, hw, crown, g)
+                continue
             xy, prof = corridor(r["points"], hw, crown, g, sig, layer, skip=SKIP_R,
                                 kf=0.667 if kind in ("main", "road", "lane") else 0.8, kc=1.5 if r["name"] in ("Mountain Road", "Sakamichi", "Forestry road", "Forest link", "Old postal path") else 1.0,
                                 B=18 if kind in ("main", "road") else 10)
@@ -703,8 +707,9 @@ for k, v in L_.items():
 log("önizleme")
 gy, gx = np.gradient(Z, CELL)
 az, alt = math.radians(315), math.radians(40)
-hs = np.clip(np.sin(alt) * 1 / np.sqrt(1 + gx ** 2 + gy ** 2)
-             + np.cos(alt) * (-gx * np.sin(az) + gy * np.cos(az)) / np.sqrt(1 + gx ** 2 + gy ** 2) * -1, 0, 1)
+# normal ~ (-gx, -gy, 1); ışığa doğru birim vektör (doğu, güney, yukarı) = (sin az, -cos az, ...) * cos alt
+lx, ly = math.sin(az) * math.cos(alt), -math.cos(az) * math.cos(alt)
+hs = np.clip((-gx * lx - gy * ly + math.sin(alt)) / np.sqrt(1 + gx ** 2 + gy ** 2), 0, 1)
 t = (Z - zmin) / span
 tint = np.stack([0.55 + 0.35 * t, 0.62 + 0.25 * t, 0.48 + 0.3 * t], -1)
 rgb = tint * (0.35 + 0.75 * hs[..., None])
@@ -724,7 +729,8 @@ img.crop((int(95 / CELL), int(135 / CELL), int(330 / CELL), int(320 / CELL))).sa
 # gerçek Kiso ile yan yana: aynı ölçek (3.87 m/px), aynı ışık
 def _hs(D, res):
     gy_, gx_ = np.gradient(D, res)
-    return np.clip(0.55 + (-gx_ - gy_) * 0.3, 0, 1)
+    lx_, ly_ = math.sin(az) * math.cos(alt), -math.cos(az) * math.cos(alt)
+    return np.clip((-gx_ * lx_ - gy_ * ly_ + math.sin(alt)) / np.sqrt(1 + gx_ ** 2 + gy_ ** 2), 0, 1)
 
 
 ours = ndi.zoom(Z, CELL / RES, order=1)
